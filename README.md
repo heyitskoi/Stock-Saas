@@ -1,10 +1,12 @@
 # Stock-Saas
 
-A simple inventory tracker for a small department store room.
+A simple inventory tracker for a small department store room. The code is
+organized as a package so it can later be reused from a web or desktop
+front‑end.
 
-This project provides a command line tool `inventory.py` that stores data in
+The command line entry point is `inventory.py` which stores data in
 `inventory.json`. You can use it to add items, issue them to users, return
-items, and check stock levels. When available stock falls below a configured
+items and check stock levels. When available stock falls below a configured
 threshold, a warning is displayed during the status check.
 
 ## Basic usage
@@ -24,3 +26,7 @@ python inventory.py status
 ```
 
 Inventory data is stored locally in `inventory.json` in the project directory.
+
+## Development roadmap
+
+See [ROADMAP.md](ROADMAP.md) for a high-level plan of upcoming features.
