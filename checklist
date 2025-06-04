@@ -1,0 +1,77 @@
+Category	Features Covered
+Core Functionality	Add, issue, return, view stock
+CLI Interface	Simple and usable commands
+Storage (MVP)	JSON file-based storage
+Stock Alerts	Threshold warnings
+Roadmap Vision	Clear plan to expand into web, multi-user system
+Modular Architecture	Multi-agent, modular backend, API-focused
+
+🔍 What’s Missing (to make it production-grade):
+1. Security & Authentication
+Expectation	Why it Matters
+✅ Authenticated access (JWT, OAuth)	Only authorized users can view or manipulate inventory
+✅ Role-based permissions (RBAC)	Controls what different users (e.g., clerks vs. managers) can do
+🔒 Secure API endpoints	HTTPS, no anonymous access to protected data
+🔐 Password management	Hashing, reset tokens, possibly 2FA for admin accounts
+
+2. Multi-Tenancy Support
+Expectation	Why it Matters
+✅ Company/Department isolation	Each tenant should only access their own data
+✅ Scoped APIs and DB queries	Every query respects company_id or similar
+✅ Admin/Manager per tenant	Each tenant manages its own users and policies
+
+3. Database & Persistence
+Expectation	Why it Matters
+✅ Use a real database (PostgreSQL, SQLite for dev)	JSON is fine for testing but not scalable
+✅ Data migrations (Alembic)	Safely evolve schema over time
+✅ Relational models	Items, users, departments, logs, etc. with foreign keys
+
+4. Logging, Auditing & History
+Expectation	Why it Matters
+✅ Audit log of changes	Trace who did what and when (add, issue, delete)
+✅ System logs (e.g., with structlog)	Useful for debugging, monitoring, compliance
+✅ Item history (who used it, when)	Helps with asset tracking and accountability
+
+5. Notifications & Alerts
+Expectation	Why it Matters
+✅ Email/Slack alerts for low stock	Proactive restocking decisions
+✅ Scheduled summary reports	Daily/weekly insights for managers
+✅ Webhooks for integrations	Plug into other systems (e.g., procurement)
+
+6. UX Expectations
+Expectation	Why it Matters
+✅ Responsive, clean UI	Users expect a polished experience (V0.dev helps here)
+✅ FastAPI + OpenAPI Docs	Auto-generated, interactive API docs
+✅ Error handling and feedback	Users know what went wrong and why
+
+7. Scalability and Deployment
+Expectation	Why it Matters
+✅ Dockerized deployment	Makes local/dev/staging/prod setups consistent
+✅ CI/CD integration (e.g., GitHub Actions)	Automates tests and deploys safely
+✅ Environment config management	.env or secret manager usage for clean separation of dev/staging/prod
+
+8. Extensibility
+Expectation	Why it Matters
+✅ Plugin/hooks or config system	Different orgs might want custom fields or flows
+✅ Modular service classes	Logic isn’t hardcoded — easy to override or extend
+✅ CLI + API + GUI	Reuse core logic from anywhere (perfect for internal)
+Optional/Nice-to-Haves)
+To cover even more edge cases or future growth, you could optionally expand with:
+
+✅ 9. Compliance & Data Protection (if going enterprise)
+Expectation	Why it Matters
+GDPR/Data export tools	Users should be able to export/delete data if required
+Data encryption at rest	Required for sensitive environments
+Regular backups / restores	Protection from data loss
+
+✅ 10. Mobile or Offline Access (for warehouse use)
+Expectation	Why it Matters
+PWA/mobile-friendly views	Store rooms often use tablets/phones
+Offline queuing	Let actions queue locally when internet is down (sync later)
+
+✅ 11. Performance & Load Handling
+Expectation	Why it Matters
+Query/index optimization	As item volume grows
+Background jobs (e.g., Celery)	For large reports, reminders, webhooks
+Rate limiting	To avoid abuse or overloading APIs
+
