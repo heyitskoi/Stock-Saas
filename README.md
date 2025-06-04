@@ -24,3 +24,17 @@ python inventory.py status
 ```
 
 Inventory data is stored locally in `inventory.json` in the project directory.
+
+## Running the API
+
+You can also manage inventory via a simple FastAPI service.
+
+```bash
+# install dependencies
+pip install -r requirements.txt
+
+# start the server
+uvicorn main:app --reload
+```
+
+API endpoints mirror the CLI commands and are documented at `/docs` when the server is running.

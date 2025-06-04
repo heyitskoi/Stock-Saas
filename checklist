@@ -5,6 +5,7 @@ Storage (MVP)	JSON file-based storage
 Stock Alerts	Threshold warnings
 Roadmap Vision	Clear plan to expand into web, multi-user system
 Modular Architecture	Multi-agent, modular backend, API-focused
+REST API	FastAPI endpoints for add/issue/return/status
 
 🔍 What’s Missing (to make it production-grade):
 1. Security & Authentication

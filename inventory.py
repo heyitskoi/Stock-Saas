@@ -1,64 +1,36 @@
-import json
-import os
 import argparse
-from typing import Dict
 
-DATA_FILE = 'inventory.json'
+from inventory_core import (
+    add_item as core_add_item,
+    issue_item as core_issue_item,
+    return_item as core_return_item,
+    get_status,
+)
 
-def load_data() -> Dict[str, dict]:
-    if not os.path.exists(DATA_FILE):
-        return {}
-    with open(DATA_FILE, 'r') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return {}
-
-def save_data(data: Dict[str, dict]):
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=2)
 
 def add_item(name: str, qty: int, threshold: int):
-    data = load_data()
-    item = data.get(name, {"available": 0, "in_use": 0, "threshold": threshold})
-    item['available'] += qty
-    if 'threshold' not in item or threshold is not None:
-        item['threshold'] = threshold
-    data[name] = item
-    save_data(data)
+    item = core_add_item(name, qty, threshold)
     print(f"Added {qty} {name}(s). Available: {item['available']}")
 
 
 def issue_item(name: str, qty: int):
-    data = load_data()
-    item = data.get(name)
-    if not item or item['available'] < qty:
+    try:
+        item = core_issue_item(name, qty)
+        print(f"Issued {qty} {name}(s). In use: {item['in_use']}")
+    except ValueError:
         print('Not enough stock to issue')
-        return
-    item['available'] -= qty
-    item['in_use'] += qty
-    save_data(data)
-    print(f"Issued {qty} {name}(s). In use: {item['in_use']}")
 
 
 def return_item(name: str, qty: int):
-    data = load_data()
-    item = data.get(name)
-    if not item or item['in_use'] < qty:
+    try:
+        item = core_return_item(name, qty)
+        print(f"Returned {qty} {name}(s). Available: {item['available']}")
+    except ValueError:
         print('Invalid return quantity')
-        return
-    item['in_use'] -= qty
-    item['available'] += qty
-    save_data(data)
-    print(f"Returned {qty} {name}(s). Available: {item['available']}")
 
 
 def status(name: str = None):
-    data = load_data()
-    if name:
-        items = {name: data.get(name)} if name in data else {}
-    else:
-        items = data
+    items = get_status(name)
     if not items:
         print('No items found')
         return

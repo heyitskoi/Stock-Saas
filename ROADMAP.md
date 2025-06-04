@@ -6,10 +6,11 @@ This roadmap outlines completed work and upcoming tasks derived from the `checkl
 - Command line inventory manager (`inventory.py`)
 - JSON file storage with threshold alerts
 - Basic roadmap vision and modular design
+- Initial FastAPI endpoints ported from CLI
 
 ## Next Steps
 ### Backend Agent (priority)
-1. Port CLI logic to FastAPI endpoints
+1. **DONE** Port CLI logic to FastAPI endpoints
 2. Add user authentication (JWT) and role-based access control
 3. Replace JSON with a database (SQLite in dev, PostgreSQL in prod)
 4. Implement audit logging for item changes
