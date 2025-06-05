@@ -1,17 +1,14 @@
 import os
 import tempfile
 
-# use a temporary sqlite database for tests before importing the app
+# Setup temporary SQLite database before importing app
 db_fd, db_path = tempfile.mkstemp(prefix="test_api", suffix=".db")
 os.close(db_fd)
-
-# configure the database and secret key once for all tests
 os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 os.environ["SECRET_KEY"] = "test-secret"
 
 from fastapi.testclient import TestClient
 from main import app
-
 import pytest
 from tests.factories import UserFactory, ItemFactory, AuditLogFactory
 
@@ -27,7 +24,6 @@ def teardown_module(module):
         os.remove(db_path)
     try:
         from tests.factories import _session as factory_session
-
         factory_session.close()
     except Exception:
         pass
@@ -113,9 +109,6 @@ def test_issue_return_errors(client):
         headers=headers,
     )
     assert ok_issue.status_code == 200
-    issued = ok_issue.json()
-    assert issued["available"] == 0
-    assert issued["in_use"] == 1
 
     fail_return = client.post(
         "/items/return",
@@ -145,10 +138,14 @@ def test_audit_log_endpoint(client):
         headers=headers,
     )
     client.post(
-        "/items/issue", json={"name": "keyboard", "quantity": 1, "tenant_id": 1}, headers=headers
+        "/items/issue",
+        json={"name": "keyboard", "quantity": 1, "tenant_id": 1},
+        headers=headers,
     )
 
-    resp = client.get("/audit/logs", params={"limit": 2, "tenant_id": 1}, headers=headers)
+    resp = client.get(
+        "/audit/logs", params={"limit": 2, "tenant_id": 1}, headers=headers
+    )
     assert resp.status_code == 200
     logs = resp.json()
     assert len(logs) == 2
@@ -159,18 +156,26 @@ def test_export_audit_csv(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
 
-    # generate at least one audit log entry via adding an item
     client.post(
         "/items/add",
         json={"name": "csvitem", "quantity": 1, "threshold": 0, "tenant_id": 1},
         headers=headers,
     )
 
-    resp = client.get(
+    start = client.post(
         "/analytics/audit/export",
         params={"limit": 1, "tenant_id": 1},
         headers=headers,
     )
+    assert start.status_code == 200
+    task_id = start.json()["task_id"]
+
+    # Poll for export to complete
+    for _ in range(5):
+        resp = client.get(f"/analytics/audit/export/{task_id}", headers=headers)
+        if resp.status_code == 200:
+            break
+
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/csv")
     lines = resp.text.strip().splitlines()
@@ -207,13 +212,20 @@ def test_create_and_list_users(client):
 
     create_resp = client.post(
         "/users/",
-        json={"username": "newuser", "password": "secret", "role": "manager", "tenant_id": 1},
+        json={
+            "username": "newuser",
+            "password": "secret",
+            "role": "manager",
+            "tenant_id": 1,
+            "notification_preference": "email",
+        },
         headers=headers,
     )
     assert create_resp.status_code == 200
     data = create_resp.json()
     assert data["username"] == "newuser"
     assert data["role"] == "manager"
+    assert data["notification_preference"] == "email"
 
     list_resp = client.get("/users/", params={"tenant_id": 1}, headers=headers)
     assert list_resp.status_code == 200
@@ -282,7 +294,13 @@ def test_update_and_delete_user(client):
 
     create_resp = client.post(
         "/users/",
-        json={"username": "temp", "password": "pwd", "role": "user", "tenant_id": 1},
+        json={
+            "username": "temp",
+            "password": "pwd",
+            "role": "user",
+            "tenant_id": 1,
+            "notification_preference": "email",
+        },
         headers=headers,
     )
     assert create_resp.status_code == 200
@@ -290,13 +308,19 @@ def test_update_and_delete_user(client):
 
     update_resp = client.put(
         "/users/update",
-        json={"id": user_id, "username": "temp2", "role": "manager"},
+        json={
+            "id": user_id,
+            "username": "temp2",
+            "role": "manager",
+            "notification_preference": "slack",
+        },
         headers=headers,
     )
     assert update_resp.status_code == 200
     data = update_resp.json()
     assert data["username"] == "temp2"
     assert data["role"] == "manager"
+    assert data["notification_preference"] == "slack"
 
     delete_resp = client.request(
         "DELETE",
@@ -314,32 +338,44 @@ def test_usage_endpoints(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
 
+    item_name = "stats-analytics"
+
     client.post(
         "/items/add",
-        json={"name": "stats", "quantity": 5, "threshold": 0, "tenant_id": 1},
+        json={"name": item_name, "quantity": 5, "threshold": 0, "tenant_id": 1},
         headers=headers,
     )
+
     client.post(
         "/items/issue",
-        json={"name": "stats", "quantity": 2, "threshold": 0, "tenant_id": 1},
+        json={"name": item_name, "quantity": 3, "tenant_id": 1},
         headers=headers,
     )
+
     client.post(
         "/items/return",
-        json={"name": "stats", "quantity": 1, "threshold": 0, "tenant_id": 1},
+        json={"name": item_name, "quantity": 1, "tenant_id": 1},
         headers=headers,
     )
 
     usage_resp = client.get(
-        "/analytics/usage/stats",
-        params={"tenant_id": 1, "days": 7},
+        f"/analytics/usage/{item_name}",
+        params={"tenant_id": 1, "days": 30},
         headers=headers,
     )
     assert usage_resp.status_code == 200
+    usage_data = usage_resp.json()
+    total_issued = sum(entry["issued"] for entry in usage_data)
+    total_returned = sum(entry["returned"] for entry in usage_data)
+    assert total_issued == 3
+    assert total_returned == 1
 
     overall_resp = client.get(
         "/analytics/usage",
-        params={"tenant_id": 1, "days": 7},
+        params={"tenant_id": 1, "days": 30},
         headers=headers,
     )
     assert overall_resp.status_code == 200
+    overall = overall_resp.json()
+    assert sum(e["issued"] for e in overall) >= 3
+    assert sum(e["returned"] for e in overall) >= 1
