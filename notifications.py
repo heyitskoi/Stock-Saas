@@ -41,9 +41,7 @@ def check_thresholds(
     slack_func: Callable[[str], None] | None = _send_slack,
 ) -> None:
     low_items = (
-        db.query(Item)
-        .filter(Item.threshold > 0, Item.available < Item.threshold)
-        .all()
+        db.query(Item).filter(Item.threshold > 0, Item.available < Item.threshold).all()
     )
     for item in low_items:
         text = f"Item '{item.name}' is below threshold: {item.available} < {item.threshold}"
