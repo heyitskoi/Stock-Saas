@@ -6,12 +6,13 @@ from fastapi import (
     HTTPException,
 )
 from inventory_core import get_recent_logs
-from database import SessionLocal
+from database import SessionLocal, get_db
 from auth import require_role
 import csv
 from io import StringIO
+from models import User, AuditLog, Item
+from datetime import datetime, timedelta
 import uuid
-from models import User
 
 router = APIRouter(prefix="/analytics")
 
@@ -69,3 +70,64 @@ def get_exported_csv(task_id: str, user: User = Depends(admin_or_manager)):
     headers = {"Content-Type": "text/csv"}
     return Response(content=csv_data, media_type="text/csv", headers=headers)
 
+
+@router.get("/usage/{item_name}", summary="Aggregate issued/returned quantities for an item")
+def item_usage(
+    item_name: str,
+    days: int = 30,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    """Return usage statistics for a single item grouped by day."""
+    since = datetime.utcnow() - timedelta(days=days)
+    logs = (
+        db.query(AuditLog)
+        .join(Item, AuditLog.item_id == Item.id)
+        .filter(Item.name == item_name, AuditLog.timestamp >= since)
+        .filter(AuditLog.action.in_(["issue", "return"]))
+        .order_by(AuditLog.timestamp)
+        .all()
+    )
+
+    data: dict[str, dict[str, int]] = {}
+    for log in logs:
+        date_key = log.timestamp.date().isoformat()
+        entry = data.setdefault(date_key, {"issued": 0, "returned": 0})
+        if log.action == "issue":
+            entry["issued"] += log.quantity
+        else:
+            entry["returned"] += log.quantity
+    return [
+        {"date": date, "issued": v["issued"], "returned": v["returned"]}
+        for date, v in sorted(data.items())
+    ]
+
+
+@router.get("/usage", summary="Aggregate usage across all items")
+def overall_usage(
+    days: int = 30,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    """Return overall issued/returned counts grouped by day."""
+    since = datetime.utcnow() - timedelta(days=days)
+    logs = (
+        db.query(AuditLog)
+        .filter(AuditLog.timestamp >= since)
+        .filter(AuditLog.action.in_(["issue", "return"]))
+        .order_by(AuditLog.timestamp)
+        .all()
+    )
+
+    data: dict[str, dict[str, int]] = {}
+    for log in logs:
+        date_key = log.timestamp.date().isoformat()
+        entry = data.setdefault(date_key, {"issued": 0, "returned": 0})
+        if log.action == "issue":
+            entry["issued"] += log.quantity
+        else:
+            entry["returned"] += log.quantity
+    return [
+        {"date": date, "issued": v["issued"], "returned": v["returned"]}
+        for date, v in sorted(data.items())
+    ]

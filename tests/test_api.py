@@ -290,3 +290,33 @@ def test_update_and_delete_endpoints(client):
     assert status_resp.status_code == 404
 
 
+def test_usage_endpoints(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    client.post(
+        "/items/add",
+        json={"name": "stats", "quantity": 5, "threshold": 0},
+        headers=headers,
+    )
+    client.post(
+        "/items/issue",
+        json={"name": "stats", "quantity": 3},
+        headers=headers,
+    )
+    client.post(
+        "/items/return",
+        json={"name": "stats", "quantity": 1},
+        headers=headers,
+    )
+
+    resp = client.get("/analytics/usage/stats", headers=headers)
+    assert resp.status_code == 200
+    usage = resp.json()
+    assert isinstance(usage, list)
+    assert usage[-1]["issued"] >= 3
+    overall = client.get("/analytics/usage", headers=headers)
+    assert overall.status_code == 200
+
+
+
