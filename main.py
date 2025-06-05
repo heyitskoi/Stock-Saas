@@ -4,6 +4,7 @@ import asyncio
 from fastapi import FastAPI, HTTPException, Depends, WebSocket
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.websockets import WebSocketDisconnect
 from sqlalchemy.orm import Session
 
@@ -29,6 +30,7 @@ from schemas import (
 from routers.users import router as users_router
 from routers.analytics import router as analytics_router
 from websocket_manager import InventoryWSManager
+from rate_limiter import RateLimiter
 
 
 app = FastAPI(
@@ -56,6 +58,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add rate limiting middleware for sensitive endpoints
+rate_limiter = RateLimiter(limit=5, window=60, routes=["/token", "/users"])
+app.state.rate_limiter = rate_limiter
+app.add_middleware(BaseHTTPMiddleware, dispatch=rate_limiter)
 
 # Initialize DB and Routers
 Base.metadata.create_all(bind=engine)

@@ -19,7 +19,8 @@ router = APIRouter(prefix="/analytics")
 
 admin_or_manager = require_role(["admin", "manager"])
 
-# In-memory export task results {task_id: csv_data or None while pending}
+# In-memory store for export task results
+# {task_id: csv_data or None while still generating}
 export_tasks: dict[str, str | None] = {}
 
 
@@ -101,10 +102,7 @@ def get_exported_csv(
     return Response(content=csv_data, media_type="text/csv")
 
 
-@router.get(
-    "/usage/{item_name}",
-    summary="Aggregate issued/returned quantities for a single item",
-)
+@router.get("/usage/{item_name}", summary="Aggregate issued/returned quantities for a single item")
 def item_usage(
     item_name: str,
     days: int = 30,
@@ -153,10 +151,7 @@ def item_usage(
     ]
 
 
-@router.get(
-    "/usage",
-    summary="Aggregate issued/returned usage across all items",
-)
+@router.get("/usage", summary="Aggregate issued/returned usage across all items")
 def overall_usage(
     days: int = 30,
     tenant_id: int | None = None,

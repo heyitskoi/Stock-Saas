@@ -16,6 +16,8 @@ from tests.factories import UserFactory, ItemFactory, AuditLogFactory
 @pytest.fixture
 def client():
     with TestClient(app) as c:
+        if hasattr(app.state, "rate_limiter"):
+            app.state.rate_limiter.attempts.clear()
         yield c
 
 
@@ -170,7 +172,6 @@ def test_export_audit_csv(client):
     assert start.status_code == 200
     task_id = start.json()["task_id"]
 
-    # Poll for export to complete
     for _ in range(5):
         resp = client.get(f"/analytics/audit/export/{task_id}", headers=headers)
         if resp.status_code == 200:
@@ -379,3 +380,24 @@ def test_usage_endpoints(client):
     overall = overall_resp.json()
     assert sum(e["issued"] for e in overall) >= 3
     assert sum(e["returned"] for e in overall) >= 1
+
+
+def test_token_rate_limiting(client):
+    for _ in range(5):
+        resp = client.post("/token", data={"username": "admin", "password": "admin"})
+        assert resp.status_code == 200
+
+    blocked = client.post("/token", data={"username": "admin", "password": "admin"})
+    assert blocked.status_code == 429
+
+
+def test_user_route_rate_limiting(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    for _ in range(5):
+        resp = client.get("/users/", params={"tenant_id": 1}, headers=headers)
+        assert resp.status_code == 200
+
+    blocked = client.get("/users/", params={"tenant_id": 1}, headers=headers)
+    assert blocked.status_code == 429
