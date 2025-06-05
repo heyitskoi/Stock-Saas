@@ -7,6 +7,13 @@ os.close(db_fd)
 os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
 os.environ.setdefault('SECRET_KEY', 'test-secret')
 
+
+
+# set secret key so auth module loads without error
+os.environ['SECRET_KEY'] = 'testsecret'
+
+
+
 from fastapi.testclient import TestClient
 from main import app
 
@@ -34,13 +41,19 @@ def get_token(client):
 def test_add_item_endpoint(client):
     token = get_token(client)
     headers = {'Authorization': f'Bearer {token}'}
-    resp = client.post('/items/add', json={'name': 'mouse', 'quantity': 2, 'threshold': 1}, headers=headers)
+    resp = client.post(
+        '/items/add',
+        json={'name': 'mouse', 'quantity': 2, 'threshold': 1},
+        headers=headers,
+    )
+
     assert resp.status_code == 200
     assert resp.json()['available'] == 2
 
     status_resp = client.get('/items/status', params={'name': 'mouse'}, headers=headers)
     assert status_resp.status_code == 200
     assert status_resp.json()['mouse']['available'] == 2
+
 
 
 def test_audit_log_endpoint(client):
@@ -55,3 +68,39 @@ def test_audit_log_endpoint(client):
     logs = resp.json()
     assert len(logs) == 2
     assert all('action' in entry for entry in logs)
+
+def test_add_item_no_token(client):
+    resp = client.post(
+        '/items/add',
+        json={'name': 'noauth', 'quantity': 1, 'threshold': 0},
+    )
+    assert resp.status_code == 401
+
+
+def test_add_item_user_role(client):
+    from database import SessionLocal
+    from models import User
+    from auth import get_password_hash
+
+    db = SessionLocal()
+    user = User(
+        username='regular',
+        hashed_password=get_password_hash('regular'),
+        role='user',
+    )
+    db.add(user)
+    db.commit()
+    db.close()
+
+    resp = client.post('/token', data={'username': 'regular', 'password': 'regular'})
+    assert resp.status_code == 200
+    token = resp.json()['access_token']
+    headers = {'Authorization': f'Bearer {token}'}
+
+    resp = client.post(
+        '/items/add',
+        json={'name': 'user-item', 'quantity': 1, 'threshold': 0},
+        headers=headers,
+    )
+    assert resp.status_code == 403
+
