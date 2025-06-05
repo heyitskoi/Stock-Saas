@@ -150,3 +150,36 @@ export async function listUsers(token: string) {
   }
   return res.json();
 }
+
+export async function updateUser(
+  token: string,
+  user: { id: number; username?: string; password?: string; role?: string }
+) {
+  const res = await fetch(`${API_URL}/users/update`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(user),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to update user');
+  }
+  return res.json();
+}
+
+export async function deleteUser(token: string, id: number) {
+  const res = await fetch(`${API_URL}/users/delete`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ id }),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to delete user');
+  }
+  return res.json();
+}

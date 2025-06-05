@@ -285,3 +285,37 @@ def test_update_and_delete_endpoints(client):
     assert status_resp.status_code == 404
 
 
+def test_update_and_delete_user(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create_resp = client.post(
+        "/users/",
+        json={"username": "temp", "password": "pwd", "role": "user"},
+        headers=headers,
+    )
+    assert create_resp.status_code == 200
+    user_id = create_resp.json()["id"]
+
+    update_resp = client.put(
+        "/users/update",
+        json={"id": user_id, "username": "temp2", "role": "manager"},
+        headers=headers,
+    )
+    assert update_resp.status_code == 200
+    data = update_resp.json()
+    assert data["username"] == "temp2"
+    assert data["role"] == "manager"
+
+    delete_resp = client.request(
+        "DELETE",
+        "/users/delete",
+        json={"id": user_id},
+        headers=headers,
+    )
+    assert delete_resp.status_code == 200
+
+    list_resp = client.get("/users/", headers=headers)
+    assert all(u["id"] != user_id for u in list_resp.json())
+
+

@@ -49,6 +49,17 @@ class UserResponse(UserBase):
         orm_mode = True
 
 
+class UserUpdate(BaseModel):
+    id: int
+    username: str | None = None
+    password: str | None = None
+    role: str | None = None
+
+
+class UserDelete(BaseModel):
+    id: int
+
+
 class AuditLogResponse(BaseModel):
     id: int
     user_id: int
