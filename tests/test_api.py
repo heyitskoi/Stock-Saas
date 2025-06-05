@@ -5,6 +5,8 @@ import tempfile
 db_fd, db_path = tempfile.mkstemp(prefix="test_api", suffix=".db")
 os.close(db_fd)
 os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
+# set secret key so auth module loads without error
+os.environ['SECRET_KEY'] = 'testsecret'
 
 from fastapi.testclient import TestClient
 from main import app
