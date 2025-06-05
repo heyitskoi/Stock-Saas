@@ -7,7 +7,9 @@ from notifications import check_thresholds
 
 
 def setup_db():
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}
+    )
     Base.metadata.create_all(bind=engine)
     Session = sessionmaker(bind=engine)
     return Session()

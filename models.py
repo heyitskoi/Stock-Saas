@@ -27,9 +27,7 @@ class Item(Base):
 
     tenant = relationship("Tenant", back_populates="items")
 
-    __table_args__ = (
-        UniqueConstraint("name", "tenant_id", name="uix_name_tenant"),
-    )
+    __table_args__ = (UniqueConstraint("name", "tenant_id", name="uix_name_tenant"),)
 
 
 class User(Base):
@@ -57,6 +55,7 @@ class AuditLog(Base):
 
     user = relationship("User")
     item = relationship("Item")
+
 
 class Notification(Base):
     __tablename__ = "notifications"

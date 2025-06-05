@@ -9,11 +9,13 @@ from auth import get_password_hash
 # Use a dedicated session for factory-created objects
 _session = SessionLocal()
 
+
 class BaseFactory(SQLAlchemyModelFactory):
     class Meta:
         abstract = True
         sqlalchemy_session = _session
         sqlalchemy_session_persistence = "commit"
+
 
 class UserFactory(BaseFactory):
     class Meta:
@@ -29,6 +31,7 @@ class UserFactory(BaseFactory):
         kwargs["hashed_password"] = get_password_hash(password)
         return super()._create(model_class, *args, **kwargs)
 
+
 class ItemFactory(BaseFactory):
     class Meta:
         model = Item
@@ -37,6 +40,7 @@ class ItemFactory(BaseFactory):
     available = 0
     in_use = 0
     threshold = 0
+
 
 class AuditLogFactory(BaseFactory):
     class Meta:
