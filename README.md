@@ -56,6 +56,34 @@ uvicorn main:app --reload
 API endpoints mirror the CLI commands and are documented at `/docs` when the server is running.
 Authenticate by posting your username and password to `/token` and include the returned token using `Authorization: Bearer <token>`.
 
+### Example requests
+
+Each item endpoint expects a JSON body matching the `ItemCreate` schema:
+
+```json
+{
+  "name": "headphones",
+  "quantity": 5,
+  "threshold": 1
+}
+```
+
+Issue and return operations ignore the `threshold` field but the same payload shape is used.
+
+```bash
+# add items
+curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"name":"headphones","quantity":10,"threshold":5}' http://localhost:8000/items/add
+
+# issue items
+curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"name":"headphones","quantity":2}' http://localhost:8000/items/issue
+
+# return items
+curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"name":"headphones","quantity":1}' http://localhost:8000/items/return
+```
+=======
 ## Running the Frontend
 
 A simple Next.js interface lives in the `frontend/` folder. It uses the API server described above.
