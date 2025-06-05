@@ -156,7 +156,12 @@ def test_export_audit_csv(client):
         headers=headers,
     )
 
-    resp = client.get('/analytics/audit/export', params={'limit': 1}, headers=headers)
+    start_resp = client.post('/analytics/audit/export', params={'limit': 1}, headers=headers)
+    assert start_resp.status_code == 200
+    task_id = start_resp.json()['task_id']
+    resp = client.get(f'/analytics/audit/export/{task_id}', headers=headers)
+    if resp.status_code == 202:
+        resp = client.get(f'/analytics/audit/export/{task_id}', headers=headers)
     assert resp.status_code == 200
     assert resp.headers['content-type'].startswith('text/csv')
     lines = resp.text.strip().splitlines()
