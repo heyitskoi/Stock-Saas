@@ -55,6 +55,27 @@ uvicorn main:app --reload
 API endpoints mirror the CLI commands and are documented at `/docs` when the server is running.
 Authenticate by posting your username and password to `/token` and include the returned token using `Authorization: Bearer <token>`.
 
+## Database migrations
+
+Alembic manages schema changes. After installing dependencies you can
+initialize the migration folder with:
+
+```bash
+alembic init alembic
+```
+
+When models are modified, create a new revision:
+
+```bash
+alembic revision --autogenerate -m "my change"
+```
+
+Apply migrations to the database defined by `DATABASE_URL`:
+
+```bash
+alembic upgrade head
+```
+
 ## Running tests
 
 After installing the project dependencies you can run the unit and API tests with `pytest`:
