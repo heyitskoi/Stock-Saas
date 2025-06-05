@@ -51,36 +51,32 @@ async def login(
 
 
 
-@app.post("/items/add")
-=======
 @app.post("/items/add", summary="Add items to inventory")
-
 def api_add_item(
-    name: str,
-    quantity: int,
-    threshold: int = 0,
+    item: ItemCreate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
-
+    item_db = add_item(db, item.name, item.quantity, item.threshold, user_id=user.id)
+    return {
+        "available": item_db.available,
+        "in_use": item_db.in_use,
+        "threshold": item_db.threshold,
+    }
 
 
 @app.post("/items/issue")
 def api_issue_item(
-    name: str,
-    quantity: int,
+    item: ItemCreate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
     try:
-        item = issue_item(db, name, quantity, user_id=user.id)
+        result = issue_item(db, item.name, item.quantity, user_id=user.id)
         return {
-            "message": f"Issued {quantity} {name}(s)",
-            "item": {
-                "available": item.available,
-                "in_use": item.in_use,
-                "threshold": item.threshold,
-            },
+            "available": result.available,
+            "in_use": result.in_use,
+            "threshold": result.threshold,
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -88,20 +84,16 @@ def api_issue_item(
 
 @app.post("/items/return")
 def api_return_item(
-    name: str,
-    quantity: int,
+    item: ItemCreate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
     try:
-        item = return_item(db, name, quantity, user_id=user.id)
+        result = return_item(db, item.name, item.quantity, user_id=user.id)
         return {
-            "message": f"Returned {quantity} {name}(s)",
-            "item": {
-                "available": item.available,
-                "in_use": item.in_use,
-                "threshold": item.threshold,
-            },
+            "available": result.available,
+            "in_use": result.in_use,
+            "threshold": result.threshold,
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { getItems } from '../lib/api';
 
 export default function Home() {
@@ -16,6 +17,11 @@ export default function Home() {
   return (
     <div style={{ padding: 20 }}>
       <h1>Inventory Dashboard</h1>
+      <nav style={{ marginBottom: 20 }}>
+        <Link href="/add" style={{ marginRight: 10 }}>Add Item</Link>
+        <Link href="/issue" style={{ marginRight: 10 }}>Issue Item</Link>
+        <Link href="/return">Return Item</Link>
+      </nav>
       {error && <p>{error}</p>}
       <table>
         <thead>
