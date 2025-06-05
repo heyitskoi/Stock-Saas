@@ -23,40 +23,53 @@ admin_or_manager = require_role(["admin", "manager"])
 export_tasks: dict[str, str | None] = {}
 
 
+def _build_csv(db: Session, limit: int, tenant_id: int) -> str:
+    """Generate CSV data for recent audit logs filtered by tenant."""
+    logs = get_recent_logs(db, limit, tenant_id)
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["id", "user_id", "item_id", "action", "quantity", "timestamp"])
+    for log in logs:
+        writer.writerow([
+            log.id,
+            log.user_id,
+            log.item_id,
+            log.action,
+            log.quantity,
+            log.timestamp.isoformat(),
+        ])
+    return output.getvalue()
+
+
 def _generate_csv(limit: int, tenant_id: int, task_id: str) -> None:
     """Background task: build CSV data for audit logs filtered by tenant."""
     db = SessionLocal()
     try:
-        logs = get_recent_logs(db, limit, tenant_id)
-        output = StringIO()
-        writer = csv.writer(output)
-        writer.writerow(
-            [
-                "id",
-                "user_id",
-                "item_id",
-                "action",
-                "quantity",
-                "timestamp",
-            ]
-        )
-        for log in logs:
-            writer.writerow(
-                [
-                    log.id,
-                    log.user_id,
-                    log.item_id,
-                    log.action,
-                    log.quantity,
-                    log.timestamp.isoformat(),
-                ]
-            )
-        export_tasks[task_id] = output.getvalue()
+        export_tasks[task_id] = _build_csv(db, limit, tenant_id)
     finally:
         db.close()
 
 
-@router.post("/audit/export", summary="Start async audit log CSV export")
+@router.get(
+    "/audit/export",
+    response_class=Response,
+    summary="Export audit log CSV immediately",
+)
+def export_audit_csv(
+    tenant_id: int,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    """Synchronously generate and return audit log CSV for a tenant."""
+    csv_data = _build_csv(db, limit, tenant_id)
+    return Response(content=csv_data, media_type="text/csv")
+
+
+@router.post(
+    "/audit/export",
+    summary="Start async audit log CSV export",
+)
 def start_audit_export(
     background_tasks: BackgroundTasks,
     tenant_id: int,
@@ -91,7 +104,6 @@ def get_exported_csv(
     csv_data = export_tasks[task_id]
     if csv_data is None:
         raise HTTPException(status_code=202, detail="Export in progress")
-
     return Response(content=csv_data, media_type="text/csv")
 
 
@@ -134,7 +146,10 @@ def item_usage(
     ]
 
 
-@router.get("/usage", summary="Aggregate issued/returned usage across all items")
+@router.get(
+    "/usage",
+    summary="Aggregate issued/returned usage across all items",
+)
 def overall_usage(
     days: int = 30,
     db: Session = Depends(get_db),
