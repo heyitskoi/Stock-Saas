@@ -29,7 +29,10 @@ export async function getItems(token: string) {
   return res.json();
 }
 
-export async function addItem(token: string, item: { name: string; quantity: number; threshold: number }) {
+export async function addItem(
+  token: string,
+  item: { name: string; quantity: number; threshold: number }
+) {
   const res = await fetch(`${API_URL}/items/add`, {
     method: 'POST',
     headers: {
@@ -44,7 +47,10 @@ export async function addItem(token: string, item: { name: string; quantity: num
   return res.json();
 }
 
-export async function issueItem(token: string, item: { name: string; quantity: number; threshold: number }) {
+export async function issueItem(
+  token: string,
+  item: { name: string; quantity: number; threshold: number }
+) {
   const res = await fetch(`${API_URL}/items/issue`, {
     method: 'POST',
     headers: {
@@ -59,7 +65,10 @@ export async function issueItem(token: string, item: { name: string; quantity: n
   return res.json();
 }
 
-export async function returnItem(token: string, item: { name: string; quantity: number; threshold: number }) {
+export async function returnItem(
+  token: string,
+  item: { name: string; quantity: number; threshold: number }
+) {
   const res = await fetch(`${API_URL}/items/return`, {
     method: 'POST',
     headers: {
@@ -180,6 +189,25 @@ export async function deleteUser(token: string, id: number) {
   });
   if (!res.ok) {
     throw new Error('Failed to delete user');
+  }
+  return res.json();
+}
+
+export async function getItemUsage(
+  token: string,
+  name: string,
+  days = 30
+) {
+  const res = await fetch(
+    `${API_URL}/analytics/usage/${name}?days=${days}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) {
+    throw new Error('Failed to load usage');
   }
   return res.json();
 }

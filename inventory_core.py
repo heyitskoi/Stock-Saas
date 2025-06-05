@@ -4,7 +4,9 @@ from models import Item, AuditLog
 from datetime import datetime
 
 
-def _log_action(db: Session, user_id: Optional[int], item: Item, action: str, quantity: int):
+def _log_action(
+    db: Session, user_id: Optional[int], item: Item, action: str, quantity: int
+):
     log = AuditLog(
         user_id=user_id,
         item_id=item.id,
@@ -15,7 +17,9 @@ def _log_action(db: Session, user_id: Optional[int], item: Item, action: str, qu
     db.add(log)
 
 
-def add_item(db: Session, name: str, qty: int, threshold: int, user_id: Optional[int] = None) -> Item:
+def add_item(
+    db: Session, name: str, qty: int, threshold: int, user_id: Optional[int] = None
+) -> Item:
     item = db.query(Item).filter(Item.name == name).first()
     if not item:
         item = Item(name=name, available=0, in_use=0, threshold=threshold)
@@ -42,7 +46,9 @@ def issue_item(db: Session, name: str, qty: int, user_id: Optional[int] = None) 
     return item
 
 
-def return_item(db: Session, name: str, qty: int, user_id: Optional[int] = None) -> Item:
+def return_item(
+    db: Session, name: str, qty: int, user_id: Optional[int] = None
+) -> Item:
     item = db.query(Item).filter(Item.name == name).first()
     if not item or item.in_use < qty:
         raise ValueError("Invalid return quantity")
@@ -76,12 +82,7 @@ def get_status(db: Session, name: Optional[str] = None) -> Dict[str, dict]:
 
 def get_recent_logs(db: Session, limit: int = 10) -> List[AuditLog]:
     """Return the most recent audit log entries."""
-    return (
-        db.query(AuditLog)
-        .order_by(AuditLog.timestamp.desc())
-        .limit(limit)
-        .all()
-    )
+    return db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(limit).all()
 
 
 def update_item(

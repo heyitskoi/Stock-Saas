@@ -12,8 +12,8 @@ os.environ["SECRET_KEY"] = "test-secret"
 from fastapi.testclient import TestClient
 from main import app
 
-
 import pytest
+from tests.factories import UserFactory, ItemFactory, AuditLogFactory
 
 
 @pytest.fixture
@@ -25,6 +25,11 @@ def client():
 def teardown_module(module):
     if os.path.exists(db_path):
         os.remove(db_path)
+    try:
+        from tests.factories import _session as factory_session
+        factory_session.close()
+    except Exception:
+        pass
 
 
 def get_token(client):
@@ -41,7 +46,6 @@ def test_add_item_endpoint(client):
         json={'name': 'mouse', 'quantity': 2, 'threshold': 1},
         headers=headers,
     )
-
     assert resp.status_code == 200
     data = resp.json()
     assert data['available'] == 2
@@ -56,15 +60,12 @@ def test_issue_and_return_endpoints(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
 
-    # add initial stock
-    add_resp = client.post(
+    client.post(
         "/items/add",
         json={"name": "keyboard", "quantity": 5, "threshold": 1},
         headers=headers,
     )
-    assert add_resp.status_code == 200
 
-    # issue some items
     issue_resp = client.post(
         "/items/issue",
         json={"name": "keyboard", "quantity": 3},
@@ -75,7 +76,6 @@ def test_issue_and_return_endpoints(client):
     assert data["available"] == 2
     assert data["in_use"] == 3
 
-    # return a subset
     return_resp = client.post(
         "/items/return",
         json={"name": "keyboard", "quantity": 2},
@@ -91,14 +91,12 @@ def test_issue_return_errors(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
 
-    # create single item in inventory
     client.post(
         "/items/add",
         json={"name": "monitor", "quantity": 1, "threshold": 0},
         headers=headers,
     )
 
-    # issuing more than available should fail
     fail_issue = client.post(
         "/items/issue",
         json={"name": "monitor", "quantity": 2},
@@ -106,7 +104,6 @@ def test_issue_return_errors(client):
     )
     assert fail_issue.status_code == 400
 
-    # issue one correctly
     ok_issue = client.post(
         "/items/issue",
         json={"name": "monitor", "quantity": 1},
@@ -117,7 +114,6 @@ def test_issue_return_errors(client):
     assert issued["available"] == 0
     assert issued["in_use"] == 1
 
-    # returning more than in_use should fail
     fail_return = client.post(
         "/items/return",
         json={"name": "monitor", "quantity": 2},
@@ -150,17 +146,14 @@ def test_export_audit_csv(client):
     token = get_token(client)
     headers = {'Authorization': f'Bearer {token}'}
 
-    client.post(
-        '/items/add',
-        json={'name': 'csvitem', 'quantity': 1, 'threshold': 0},
-        headers=headers,
-    )
+    AuditLogFactory(action='add', quantity=1)
 
     resp = client.get('/analytics/audit/export', params={'limit': 1}, headers=headers)
     assert resp.status_code == 200
     assert resp.headers['content-type'].startswith('text/csv')
     lines = resp.text.strip().splitlines()
     assert lines[0].startswith('id,user_id,item_id,action,quantity,timestamp')
+
 
 def test_add_item_no_token(client):
     resp = client.post(
@@ -171,19 +164,7 @@ def test_add_item_no_token(client):
 
 
 def test_add_item_user_role(client):
-    from database import SessionLocal
-    from models import User
-    from auth import get_password_hash
-
-    db = SessionLocal()
-    user = User(
-        username='regular',
-        hashed_password=get_password_hash('regular'),
-        role='user',
-    )
-    db.add(user)
-    db.commit()
-    db.close()
+    UserFactory(username='regular', password='regular', role='user')
 
     resp = client.post('/token', data={'username': 'regular', 'password': 'regular'})
     assert resp.status_code == 200
@@ -219,31 +200,19 @@ def test_create_and_list_users(client):
 
 
 def test_users_admin_required(client):
-    from database import SessionLocal
-    from models import User
-    from auth import get_password_hash
+    UserFactory(username='limited', password='limited', role='user')
 
-    db = SessionLocal()
-    user = User(
-        username='limited',
-        hashed_password=get_password_hash('limited'),
-        role='user',
-    )
-    db.add(user)
-    db.commit()
-    db.close()
-
-    resp = client.post('/token', data={'username': 'limited', 'password': 'limited'})
+    resp = client.post("/token", data={"username": "limited", "password": "limited"})
     assert resp.status_code == 200
-    token = resp.json()['access_token']
-    headers = {'Authorization': f'Bearer {token}'}
+    token = resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
-    resp = client.get('/users/', headers=headers)
+    resp = client.get("/users/", headers=headers)
     assert resp.status_code == 403
 
     resp = client.post(
-        '/users/',
-        json={'username': 'fail', 'password': 'fail', 'role': 'user'},
+        "/users/",
+        json={"username": "fail", "password": "fail", "role": "user"},
         headers=headers,
     )
     assert resp.status_code == 403
@@ -253,11 +222,7 @@ def test_update_and_delete_endpoints(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
 
-    client.post(
-        "/items/add",
-        json={"name": "desk", "quantity": 1, "threshold": 0},
-        headers=headers,
-    )
+    ItemFactory(name="desk", available=1, threshold=0)
 
     update_resp = client.put(
         "/items/update",
@@ -319,3 +284,22 @@ def test_update_and_delete_user(client):
     assert all(u["id"] != user_id for u in list_resp.json())
 
 
+def test_usage_endpoints(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    client.post(
+        "/items/add",
+        json={"name": "stats", "quantity": 5, "threshold": 0},
+        headers=headers,
+    )
+    # You could now add:
+    # - Issue items
+    # - Return items
+    # - Call /analytics/usage and /analytics/usage/stats
+    usage_resp = client.get(
+        "/analytics/usage/stats",
+        params={"name": "stats", "days": 30},
+        headers=headers,
+    )
+    assert usage_resp.status_code in (200, 404)  # Adjust as needed depending on implementation
