@@ -1,9 +1,10 @@
 import os
+import asyncio
 
 from fastapi import FastAPI, HTTPException, Depends, WebSocket
-from starlette.websockets import WebSocketDisconnect
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.websockets import WebSocketDisconnect
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db, SessionLocal, DATABASE_URL
@@ -27,17 +28,25 @@ from schemas import (
 )
 from routers.users import router as users_router
 from routers.analytics import router as analytics_router
-import asyncio
 from websocket_manager import InventoryWSManager
 
-app = FastAPI(title="Stock SaaS API")
+
+app = FastAPI(
+    title="Stock SaaS API",
+    description=(
+        "Multi-tenant inventory management API. Include `tenant_id` in all"
+        " requests to scope data. Long running operations such as CSV exports"
+        " run as background tasks. Environment variables configure the database,"
+        " initial admin credentials and notification settings."
+    ),
+)
+
 ws_manager = InventoryWSManager()
 
-# configure CORS so the frontend can access the API
+# Configure CORS
 frontend_origin = os.getenv("NEXT_PUBLIC_API_URL")
 origins = [frontend_origin] if frontend_origin else []
 if DATABASE_URL.startswith("sqlite"):
-    # allow everything during local development and tests
     origins = ["*"]
 
 app.add_middleware(
@@ -48,6 +57,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize DB and Routers
 Base.metadata.create_all(bind=engine)
 app.include_router(users_router)
 app.include_router(analytics_router)
@@ -94,6 +104,7 @@ def create_default_admin():
     db.close()
 
 
+# Role guards
 admin_or_manager = require_role(["admin", "manager"])
 any_user = require_role(["admin", "manager", "user"])
 
@@ -103,6 +114,7 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
+    """Authenticate a user and return a JWT access token."""
     return await login_for_access_token(form_data, db)
 
 
@@ -136,7 +148,6 @@ async def api_issue_item(
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
-    """Issue quantity of an item from the inventory."""
     try:
         item = issue_item(
             db,
@@ -163,7 +174,6 @@ async def api_return_item(
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
-    """Return quantity of an item to the inventory."""
     try:
         item = return_item(
             db,
@@ -200,11 +210,7 @@ def api_get_status(
     return data
 
 
-@app.get(
-    "/audit/logs",
-    response_model=list[AuditLogResponse],
-    summary="Get recent audit log entries",
-)
+@app.get("/audit/logs", response_model=list[AuditLogResponse], summary="Get recent audit log entries")
 def api_get_audit_logs(
     tenant_id: int,
     limit: int = 10,

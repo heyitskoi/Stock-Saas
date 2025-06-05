@@ -13,6 +13,7 @@ celery_app.conf.beat_schedule = {
     }
 }
 
+
 @celery_app.task
 def check_stock_levels():
     db = SessionLocal()
