@@ -1,11 +1,11 @@
 import os
 import tempfile
 
-# use a temporary sqlite database for tests before importing the app
-db_fd, db_path = tempfile.mkstemp(prefix="test_api", suffix=".db")
-os.close(db_fd)
-os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
-os.environ.setdefault('SECRET_KEY', 'test-secret')
+
+
+# set secret key so auth module loads without error
+os.environ['SECRET_KEY'] = 'testsecret'
+
 
 from fastapi.testclient import TestClient
 from main import app
@@ -34,7 +34,12 @@ def get_token(client):
 def test_add_item_endpoint(client):
     token = get_token(client)
     headers = {'Authorization': f'Bearer {token}'}
-    resp = client.post('/items/add', json={'name': 'mouse', 'quantity': 2, 'threshold': 1}, headers=headers)
+    resp = client.post(
+        '/items/add',
+        json={'name': 'mouse', 'quantity': 2, 'threshold': 1},
+        headers=headers,
+    )
+
     assert resp.status_code == 200
     assert resp.json()['available'] == 2
 
