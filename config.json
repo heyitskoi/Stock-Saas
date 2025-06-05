@@ -1,0 +1,4 @@
+{
+  "default_threshold": 1,
+  "data_file": "inventory.json"
+}

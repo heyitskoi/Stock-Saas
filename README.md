@@ -14,6 +14,7 @@ JWT tokens and basic role based access control (admin, manager, user). A default
 You can use the CLI or the API to manage inventory. When available stock falls
 below a configured threshold, a warning is displayed during the status check.
 
+
 ## Basic usage
 
 ```bash
@@ -30,6 +31,25 @@ python inventory.py return headphones 1
 python inventory.py status
 ```
 
+Configuration options can be adjusted in `config.json`. The default file
+contains the path to `inventory.json` and a `default_threshold` used when
+adding items without specifying one.
+
+Inventory data is stored locally using the path defined in `config.json`.
+
+## Development roadmap
+
+See [ROADMAP.md](ROADMAP.md) for a high-level plan of upcoming features.
+
+Run the unit tests with:
+
+```bash
+python -m pytest
+```
+=======
+Inventory data is stored locally in `inventory.json` in the project directory.
+
+=======
 Inventory data is stored in a SQLite database named `inventory.db` by default.
 Set `DATABASE_URL` to use a different database engine.
 
@@ -47,3 +67,4 @@ uvicorn main:app --reload
 
 API endpoints mirror the CLI commands and are documented at `/docs` when the server is running.
 Authenticate by posting your username and password to `/token` and include the returned token using `Authorization: Bearer <token>`.
+
