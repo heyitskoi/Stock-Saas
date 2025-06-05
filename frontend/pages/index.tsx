@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getItems, exportAuditCSV } from '../lib/api';
+import { useRouter } from 'next/router';
+import { getItems, deleteItem, exportAuditCSV } from '../lib/api';
 
 export default function Home() {
+  const router = useRouter();
   const [items, setItems] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -19,6 +21,17 @@ export default function Home() {
       if (res.ok) setIsAdmin(true);
     });
   }, []);
+
+  async function handleDelete(name: string) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      await deleteItem(token, name);
+      setItems(items.filter((it) => it.name !== name));
+    } catch {
+      setError('Failed to delete item');
+    }
+  }
 
   async function handleDownload() {
     const token = localStorage.getItem('token');
@@ -57,6 +70,7 @@ export default function Home() {
             <th>Name</th>
             <th>Available</th>
             <th>In Use</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -65,6 +79,14 @@ export default function Home() {
               <td>{item.name}</td>
               <td>{item.available}</td>
               <td>{item.in_use}</td>
+              <td>
+                <button onClick={() => router.push(`/edit?name=${item.name}`)}>
+                  Edit
+                </button>
+                <button onClick={() => handleDelete(item.name)} style={{ marginLeft: 5 }}>
+                  Delete
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -72,4 +94,3 @@ export default function Home() {
     </div>
   );
 }
-

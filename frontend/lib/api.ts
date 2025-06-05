@@ -74,6 +74,39 @@ export async function returnItem(token: string, item: { name: string; quantity: 
   return res.json();
 }
 
+export async function updateItemApi(
+  token: string,
+  item: { name: string; new_name?: string; threshold?: number }
+) {
+  const res = await fetch(`${API_URL}/items/update`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to update item');
+  }
+  return res.json();
+}
+
+export async function deleteItem(token: string, name: string) {
+  const res = await fetch(`${API_URL}/items/delete`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to delete item');
+  }
+  return res.json();
+}
+
 export async function exportAuditCSV(token: string, limit = 100): Promise<string> {
   const res = await fetch(`${API_URL}/analytics/audit/export?limit=${limit}`, {
     headers: {

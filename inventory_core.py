@@ -82,3 +82,34 @@ def get_recent_logs(db: Session, limit: int = 10) -> List[AuditLog]:
         .limit(limit)
         .all()
     )
+
+
+def update_item(
+    db: Session,
+    name: str,
+    new_name: Optional[str] = None,
+    threshold: Optional[int] = None,
+    user_id: Optional[int] = None,
+) -> Item:
+    """Update an item's name and/or threshold."""
+    item = db.query(Item).filter(Item.name == name).first()
+    if not item:
+        raise ValueError("Item not found")
+    if new_name:
+        item.name = new_name
+    if threshold is not None:
+        item.threshold = threshold
+    _log_action(db, user_id, item, "update", 0)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def delete_item(db: Session, name: str, user_id: Optional[int] = None) -> None:
+    """Remove an item from the inventory."""
+    item = db.query(Item).filter(Item.name == name).first()
+    if not item:
+        raise ValueError("Item not found")
+    _log_action(db, user_id, item, "delete", 0)
+    db.delete(item)
+    db.commit()

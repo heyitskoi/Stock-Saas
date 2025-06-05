@@ -15,6 +15,16 @@ class ItemCreate(BaseModel):
     threshold: int = 0
 
 
+class ItemUpdate(BaseModel):
+    name: str
+    new_name: str | None = None
+    threshold: int | None = None
+
+
+class ItemDelete(BaseModel):
+    name: str
+
+
 class ItemResponse(ItemBase):
     id: int
 

@@ -249,3 +249,39 @@ def test_users_admin_required(client):
     assert resp.status_code == 403
 
 
+def test_update_and_delete_endpoints(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    client.post(
+        "/items/add",
+        json={"name": "desk", "quantity": 1, "threshold": 0},
+        headers=headers,
+    )
+
+    update_resp = client.put(
+        "/items/update",
+        json={"name": "desk", "new_name": "desk-pro", "threshold": 2},
+        headers=headers,
+    )
+    assert update_resp.status_code == 200
+    data = update_resp.json()
+    assert data["name"] == "desk-pro"
+    assert data["threshold"] == 2
+
+    delete_resp = client.request(
+        "DELETE",
+        "/items/delete",
+        json={"name": "desk-pro"},
+        headers=headers,
+    )
+    assert delete_resp.status_code == 200
+
+    status_resp = client.get(
+        "/items/status",
+        params={"name": "desk-pro"},
+        headers=headers,
+    )
+    assert status_resp.status_code == 404
+
+
