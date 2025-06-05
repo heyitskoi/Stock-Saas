@@ -43,7 +43,9 @@ def test_add_item_endpoint(client):
     )
 
     assert resp.status_code == 200
-    assert resp.json()['available'] == 2
+    data = resp.json()
+    assert data['available'] == 2
+    assert data['name'] == 'mouse'
 
     status_resp = client.get('/items/status', params={'name': 'mouse'}, headers=headers)
     assert status_resp.status_code == 200
@@ -65,7 +67,7 @@ def test_issue_and_return_endpoints(client):
     # issue some items
     issue_resp = client.post(
         "/items/issue",
-        json={"name": "keyboard", "quantity": 3, "threshold": 0},
+        json={"name": "keyboard", "quantity": 3},
         headers=headers,
     )
     assert issue_resp.status_code == 200
@@ -76,7 +78,7 @@ def test_issue_and_return_endpoints(client):
     # return a subset
     return_resp = client.post(
         "/items/return",
-        json={"name": "keyboard", "quantity": 2, "threshold": 0},
+        json={"name": "keyboard", "quantity": 2},
         headers=headers,
     )
     assert return_resp.status_code == 200
@@ -99,7 +101,7 @@ def test_issue_return_errors(client):
     # issuing more than available should fail
     fail_issue = client.post(
         "/items/issue",
-        json={"name": "monitor", "quantity": 2, "threshold": 0},
+        json={"name": "monitor", "quantity": 2},
         headers=headers,
     )
     assert fail_issue.status_code == 400
@@ -107,7 +109,7 @@ def test_issue_return_errors(client):
     # issue one correctly
     ok_issue = client.post(
         "/items/issue",
-        json={"name": "monitor", "quantity": 1, "threshold": 0},
+        json={"name": "monitor", "quantity": 1},
         headers=headers,
     )
     assert ok_issue.status_code == 200
@@ -118,7 +120,7 @@ def test_issue_return_errors(client):
     # returning more than in_use should fail
     fail_return = client.post(
         "/items/return",
-        json={"name": "monitor", "quantity": 2, "threshold": 0},
+        json={"name": "monitor", "quantity": 2},
         headers=headers,
     )
     assert fail_return.status_code == 400

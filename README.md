@@ -117,6 +117,8 @@ npm run dev
 
 By default it expects the FastAPI backend to run on `http://localhost:8000`. You can change this by setting `NEXT_PUBLIC_API_URL` when starting the Next.js server.
 
+After logging in you will see the dashboard listing all items. Links are provided to pages for adding new stock, issuing items and recording returns. Each form uses the JWT token stored in `localStorage` to authenticate API requests.
+
 
 
 ## Running with Docker

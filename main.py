@@ -52,27 +52,29 @@ async def login(
 
 @app.post("/items/add", response_model=ItemResponse, summary="Add items to inventory")
 def api_add_item(
-    item_data: ItemCreate,
+    payload: ItemCreate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
     item = add_item(
         db,
-        item_data.name,
-        item_data.quantity,
-        item_data.threshold,
+        payload.name,
+        payload.quantity,
+        payload.threshold,
         user_id=user.id,
     )
     return item
 
+
 @app.post("/items/issue", response_model=ItemResponse, summary="Issue items to a user")
 def api_issue_item(
-    item_data: ItemCreate,
+    payload: ItemCreate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
+    """Issue quantity of an item from the inventory."""
     try:
-        item = issue_item(db, item_data.name, item_data.quantity, user_id=user.id)
+        item = issue_item(db, payload.name, payload.quantity, user_id=user.id)
         return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -80,12 +82,13 @@ def api_issue_item(
 
 @app.post("/items/return", response_model=ItemResponse, summary="Return issued items")
 def api_return_item(
-    item_data: ItemCreate,
+    payload: ItemCreate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
+    """Return quantity of an item to the inventory."""
     try:
-        item = return_item(db, item_data.name, item_data.quantity, user_id=user.id)
+        item = return_item(db, payload.name, payload.quantity, user_id=user.id)
         return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
