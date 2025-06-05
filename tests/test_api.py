@@ -166,11 +166,15 @@ def test_export_audit_csv(client):
         headers=headers,
     )
 
-    resp = client.get(
+    start = client.post(
         "/analytics/audit/export",
         params={"limit": 1, "tenant_id": 1},
         headers=headers,
     )
+    assert start.status_code == 200
+    task_id = start.json()["task_id"]
+
+    resp = client.get(f"/analytics/audit/export/{task_id}", headers=headers)
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/csv")
     lines = resp.text.strip().splitlines()
@@ -207,13 +211,20 @@ def test_create_and_list_users(client):
 
     create_resp = client.post(
         "/users/",
-        json={"username": "newuser", "password": "secret", "role": "manager", "tenant_id": 1},
+        json={
+            "username": "newuser",
+            "password": "secret",
+            "role": "manager",
+            "tenant_id": 1,
+            "notification_preference": "email",
+        },
         headers=headers,
     )
     assert create_resp.status_code == 200
     data = create_resp.json()
     assert data["username"] == "newuser"
     assert data["role"] == "manager"
+    assert data["notification_preference"] == "email"
 
     list_resp = client.get("/users/", params={"tenant_id": 1}, headers=headers)
     assert list_resp.status_code == 200
@@ -282,7 +293,13 @@ def test_update_and_delete_user(client):
 
     create_resp = client.post(
         "/users/",
-        json={"username": "temp", "password": "pwd", "role": "user", "tenant_id": 1},
+        json={
+            "username": "temp",
+            "password": "pwd",
+            "role": "user",
+            "tenant_id": 1,
+            "notification_preference": "email",
+        },
         headers=headers,
     )
     assert create_resp.status_code == 200
@@ -290,13 +307,19 @@ def test_update_and_delete_user(client):
 
     update_resp = client.put(
         "/users/update",
-        json={"id": user_id, "username": "temp2", "role": "manager"},
+        json={
+            "id": user_id,
+            "username": "temp2",
+            "role": "manager",
+            "notification_preference": "slack",
+        },
         headers=headers,
     )
     assert update_resp.status_code == 200
     data = update_resp.json()
     assert data["username"] == "temp2"
     assert data["role"] == "manager"
+    assert data["notification_preference"] == "slack"
 
     delete_resp = client.request(
         "DELETE",

@@ -40,6 +40,7 @@ class User(Base):
     hashed_password = Column(String)
     role = Column(String, default="user")
     tenant_id = Column(Integer, ForeignKey("tenants.id"))
+    notification_preference = Column(String, default="email")
 
     tenant = relationship("Tenant", back_populates="users")
 

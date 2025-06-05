@@ -21,6 +21,7 @@ class UserFactory(BaseFactory):
 
     username = factory.Sequence(lambda n: f"user{n}")
     role = "user"
+    notification_preference = "email"
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
