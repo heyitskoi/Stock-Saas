@@ -66,72 +66,53 @@ if __name__ == "__main__":
 =======
 import json
 import os
+=======
 import argparse
-from typing import Dict
 
-DATA_FILE = 'inventory.json'
+from inventory_core import (
+    add_item as core_add_item,
+    issue_item as core_issue_item,
+    return_item as core_return_item,
+    get_status,
+)
+from database import SessionLocal, engine
+from models import Base
 
-def load_data() -> Dict[str, dict]:
-    if not os.path.exists(DATA_FILE):
-        return {}
-    with open(DATA_FILE, 'r') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return {}
-
-def save_data(data: Dict[str, dict]):
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=2)
-
-def add_item(name: str, qty: int, threshold: int):
-    data = load_data()
-    item = data.get(name, {"available": 0, "in_use": 0, "threshold": threshold})
-    item['available'] += qty
-    if 'threshold' not in item or threshold is not None:
-        item['threshold'] = threshold
-    data[name] = item
-    save_data(data)
-    print(f"Added {qty} {name}(s). Available: {item['available']}")
+Base.metadata.create_all(bind=engine)
 
 
-def issue_item(name: str, qty: int):
-    data = load_data()
-    item = data.get(name)
-    if not item or item['available'] < qty:
+def add_item(db, name: str, qty: int, threshold: int):
+    item = core_add_item(db, name, qty, threshold)
+    print(
+        f"Added {qty} {name}(s). Available: {item.available}"
+    )
+
+
+def issue_item(db, name: str, qty: int):
+    try:
+        item = core_issue_item(db, name, qty)
+        print(f"Issued {qty} {name}(s). In use: {item.in_use}")
+    except ValueError:
         print('Not enough stock to issue')
-        return
-    item['available'] -= qty
-    item['in_use'] += qty
-    save_data(data)
-    print(f"Issued {qty} {name}(s). In use: {item['in_use']}")
 
 
-def return_item(name: str, qty: int):
-    data = load_data()
-    item = data.get(name)
-    if not item or item['in_use'] < qty:
+def return_item(db, name: str, qty: int):
+    try:
+        item = core_return_item(db, name, qty)
+        print(f"Returned {qty} {name}(s). Available: {item.available}")
+    except ValueError:
         print('Invalid return quantity')
-        return
-    item['in_use'] -= qty
-    item['available'] += qty
-    save_data(data)
-    print(f"Returned {qty} {name}(s). Available: {item['available']}")
 
 
-def status(name: str = None):
-    data = load_data()
-    if name:
-        items = {name: data.get(name)} if name in data else {}
-    else:
-        items = data
+def status(db, name: str = None):
+    items = get_status(db, name)
     if not items:
         print('No items found')
         return
     for k, item in items.items():
-        available = item['available']
-        in_use = item['in_use']
-        threshold = item.get('threshold', 0)
+        available = item["available"]
+        in_use = item["in_use"]
+        threshold = item.get("threshold", 0)
         print(f"{k}: available={available}, in_use={in_use}, threshold={threshold}")
         if available < threshold:
             print(f"  WARNING: {k} stock below threshold")
@@ -159,16 +140,20 @@ def main():
 
     args = parser.parse_args()
 
-    if args.command == 'add':
-        add_item(args.name, args.quantity, args.threshold or 0)
-    elif args.command == 'issue':
-        issue_item(args.name, args.quantity)
-    elif args.command == 'return':
-        return_item(args.name, args.quantity)
-    elif args.command == 'status':
-        status(args.name)
-    else:
-        parser.print_help()
+    db = SessionLocal()
+    try:
+        if args.command == 'add':
+            add_item(db, args.name, args.quantity, args.threshold or 0)
+        elif args.command == 'issue':
+            issue_item(db, args.name, args.quantity)
+        elif args.command == 'return':
+            return_item(db, args.name, args.quantity)
+        elif args.command == 'status':
+            status(db, args.name)
+        else:
+            parser.print_help()
+    finally:
+        db.close()
 
 if __name__ == '__main__':
 

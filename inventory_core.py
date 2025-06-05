@@ -1,0 +1,68 @@
+from typing import Dict, Optional
+from sqlalchemy.orm import Session
+from models import Item, AuditLog
+from datetime import datetime
+
+
+def _log_action(db: Session, user_id: Optional[int], item: Item, action: str, quantity: int):
+    log = AuditLog(user_id=user_id, item_id=item.id, action=action, quantity=quantity, timestamp=datetime.utcnow())
+    db.add(log)
+    db.commit()
+
+
+def add_item(db: Session, name: str, qty: int, threshold: int, user_id: Optional[int] = None) -> Item:
+    item = db.query(Item).filter(Item.name == name).first()
+    if not item:
+        item = Item(name=name, available=0, in_use=0, threshold=threshold)
+        db.add(item)
+    item.available += qty
+    if threshold is not None:
+        item.threshold = threshold
+    db.commit()
+    db.refresh(item)
+    _log_action(db, user_id, item, "add", qty)
+    return item
+
+
+def issue_item(db: Session, name: str, qty: int, user_id: Optional[int] = None) -> Item:
+    item = db.query(Item).filter(Item.name == name).first()
+    if not item or item.available < qty:
+        raise ValueError("Not enough stock to issue")
+    item.available -= qty
+    item.in_use += qty
+    db.commit()
+    db.refresh(item)
+    _log_action(db, user_id, item, "issue", qty)
+    return item
+
+
+def return_item(db: Session, name: str, qty: int, user_id: Optional[int] = None) -> Item:
+    item = db.query(Item).filter(Item.name == name).first()
+    if not item or item.in_use < qty:
+        raise ValueError("Invalid return quantity")
+    item.in_use -= qty
+    item.available += qty
+    db.commit()
+    db.refresh(item)
+    _log_action(db, user_id, item, "return", qty)
+    return item
+
+
+def get_status(db: Session, name: Optional[str] = None) -> Dict[str, dict]:
+    items = {}
+    if name:
+        item = db.query(Item).filter(Item.name == name).first()
+        if item:
+            items[item.name] = {
+                "available": item.available,
+                "in_use": item.in_use,
+                "threshold": item.threshold,
+            }
+    else:
+        for item in db.query(Item).all():
+            items[item.name] = {
+                "available": item.available,
+                "in_use": item.in_use,
+                "threshold": item.threshold,
+            }
+    return items
