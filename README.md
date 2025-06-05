@@ -6,6 +6,7 @@ The project started as a CLI backed by a JSON file but now persists data in a
 SQL database using SQLAlchemy. SQLite is used by default for local development
 and you can point `DATABASE_URL` to a PostgreSQL database in production. Every
 change to an item is written to an audit log table so history can be reviewed.
+Administrators can export these logs as a CSV report via the API.
 
 User accounts are stored in the same database. Authentication is handled with
 JWT tokens and basic role based access control (admin, manager, user).
@@ -106,6 +107,13 @@ curl -H "Authorization: Bearer <token>" \
   'http://localhost:8000/audit/logs?limit=5'
 ```
 
+You can also export the same data as CSV for reporting:
+
+```bash
+curl -H "Authorization: Bearer <token>" \
+  'http://localhost:8000/analytics/audit/export?limit=100' -o audit_log.csv
+```
+
 ## Running the Frontend
 
 A simple Next.js interface lives in the `frontend/` folder. It uses the API server described above.
@@ -145,4 +153,5 @@ docker-compose up --build
 ```
 
 The API will be available on `http://localhost:8000` and the frontend on `http://localhost:3000`.
+
 
