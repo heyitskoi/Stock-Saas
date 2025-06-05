@@ -106,3 +106,47 @@ export async function deleteItem(token: string, name: string) {
   }
   return res.json();
 }
+
+export async function exportAuditCSV(token: string, limit = 100): Promise<string> {
+  const res = await fetch(`${API_URL}/analytics/audit/export?limit=${limit}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to export CSV');
+  }
+  return res.text();
+}
+
+export async function createUser(
+  token: string,
+  user: { username: string; password: string; role: string }
+) {
+  const res = await fetch(`${API_URL}/users/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(user),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to create user');
+  }
+  return res.json();
+}
+
+export async function listUsers(token: string) {
+  const res = await fetch(`${API_URL}/users/`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to load users');
+  }
+  return res.json();
+}

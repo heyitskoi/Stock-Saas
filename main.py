@@ -25,6 +25,7 @@ from schemas import (
     ItemDelete,
 )
 from routers.users import router as users_router
+from routers.analytics import router as analytics_router
 
 app = FastAPI(title="Stock SaaS API")
 
@@ -45,6 +46,7 @@ app.add_middleware(
 
 Base.metadata.create_all(bind=engine)
 app.include_router(users_router)
+app.include_router(analytics_router)
 
 
 @app.on_event("startup")
