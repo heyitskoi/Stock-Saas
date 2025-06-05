@@ -18,7 +18,7 @@ router = APIRouter(prefix="/analytics")
 
 admin_or_manager = require_role(["admin", "manager"])
 
-# store results of async exports in memory {task_id: csv_data}
+# In-memory store for export task results: {task_id: csv_data or None if in progress}
 export_tasks: dict[str, str | None] = {}
 
 
