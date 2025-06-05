@@ -7,3 +7,5 @@ python-multipart
 
 httpx==0.27.*
 
+python-dotenv
+
