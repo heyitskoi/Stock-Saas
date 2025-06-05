@@ -3,6 +3,9 @@ import os
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from rate_limiter import RateLimiter
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db, SessionLocal, DATABASE_URL
@@ -43,6 +46,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# limit sensitive endpoints to 5 requests per minute per IP
+rate_limiter = RateLimiter(limit=5, window=60, routes=["/token", "/users"])
+app.state.rate_limiter = rate_limiter
+app.add_middleware(BaseHTTPMiddleware, dispatch=rate_limiter)
 
 Base.metadata.create_all(bind=engine)
 app.include_router(users_router)

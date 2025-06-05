@@ -19,6 +19,8 @@ from tests.factories import UserFactory, ItemFactory, AuditLogFactory
 @pytest.fixture
 def client():
     with TestClient(app) as c:
+        if hasattr(app.state, "rate_limiter"):
+            app.state.rate_limiter.attempts.clear()
         yield c
 
 
@@ -145,10 +147,14 @@ def test_audit_log_endpoint(client):
         headers=headers,
     )
     client.post(
-        "/items/issue", json={"name": "keyboard", "quantity": 1, "tenant_id": 1}, headers=headers
+        "/items/issue",
+        json={"name": "keyboard", "quantity": 1, "tenant_id": 1},
+        headers=headers,
     )
 
-    resp = client.get("/audit/logs", params={"limit": 2, "tenant_id": 1}, headers=headers)
+    resp = client.get(
+        "/audit/logs", params={"limit": 2, "tenant_id": 1}, headers=headers
+    )
     assert resp.status_code == 200
     logs = resp.json()
     assert len(logs) == 2
@@ -166,11 +172,15 @@ def test_export_audit_csv(client):
         headers=headers,
     )
 
-    resp = client.get(
+    start = client.post(
         "/analytics/audit/export",
         params={"limit": 1, "tenant_id": 1},
         headers=headers,
     )
+    assert start.status_code == 200
+    task_id = start.json()["task_id"]
+
+    resp = client.get(f"/analytics/audit/export/{task_id}", headers=headers)
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/csv")
     lines = resp.text.strip().splitlines()
@@ -207,7 +217,12 @@ def test_create_and_list_users(client):
 
     create_resp = client.post(
         "/users/",
-        json={"username": "newuser", "password": "secret", "role": "manager", "tenant_id": 1},
+        json={
+            "username": "newuser",
+            "password": "secret",
+            "role": "manager",
+            "tenant_id": 1,
+        },
         headers=headers,
     )
     assert create_resp.status_code == 200
@@ -327,4 +342,29 @@ def test_usage_endpoints(client):
     usage_resp = client.get(
         "/analytics/usage/stats", params={"days": 30}, headers=headers
     )
-    assert usage_resp.status_code in (200, 404)  # Adjust as needed depending on implementation
+    assert usage_resp.status_code in (
+        200,
+        404,
+    )  # Adjust as needed depending on implementation
+
+
+def test_token_rate_limiting(client):
+    # send several login requests to trigger the limiter
+    for _ in range(5):
+        resp = client.post("/token", data={"username": "admin", "password": "admin"})
+        assert resp.status_code == 200
+
+    blocked = client.post("/token", data={"username": "admin", "password": "admin"})
+    assert blocked.status_code == 429
+
+
+def test_user_route_rate_limiting(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    for _ in range(5):
+        resp = client.get("/users/", params={"tenant_id": 1}, headers=headers)
+        assert resp.status_code == 200
+
+    blocked = client.get("/users/", params={"tenant_id": 1}, headers=headers)
+    assert blocked.status_code == 429
