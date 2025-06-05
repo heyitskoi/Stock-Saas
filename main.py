@@ -5,10 +5,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db, SessionLocal, DATABASE_URL
-from inventory_core import add_item, issue_item, return_item, get_status
+from inventory_core import add_item, issue_item, return_item, get_status, get_recent_logs
 from auth import login_for_access_token, require_role, get_password_hash
 from models import User
-from schemas import ItemCreate, ItemResponse
+from schemas import ItemCreate, ItemResponse, AuditLogResponse
 
 app = FastAPI(title="Stock SaaS API")
 
@@ -50,46 +50,59 @@ async def login(
     return await login_for_access_token(form_data, db)
 
 
-@app.post("/items/add", response_model=ItemResponse, summary="Add items to inventory")
+
+@app.post("/items/add")
+=======
+@app.post("/items/add", summary="Add items to inventory")
+
 def api_add_item(
-    item_data: ItemCreate,
+    name: str,
+    quantity: int,
+    threshold: int = 0,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
 
-    item = add_item(
-        db,
-        item_data.name,
-        item_data.quantity,
-        item_data.threshold,
-        user_id=user.id,
-    )
-    return item
 
 
-
-@app.post("/items/issue", response_model=ItemResponse, summary="Issue items to a user")
+@app.post("/items/issue")
 def api_issue_item(
-    item_data: ItemCreate,
+    name: str,
+    quantity: int,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
     try:
-        item = issue_item(db, item_data.name, item_data.quantity, user_id=user.id)
-        return item
+        item = issue_item(db, name, quantity, user_id=user.id)
+        return {
+            "message": f"Issued {quantity} {name}(s)",
+            "item": {
+                "available": item.available,
+                "in_use": item.in_use,
+                "threshold": item.threshold,
+            },
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/items/return", response_model=ItemResponse, summary="Return issued items")
+@app.post("/items/return")
 def api_return_item(
-    item_data: ItemCreate,
+    name: str,
+    quantity: int,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
     try:
-        item = return_item(db, item_data.name, item_data.quantity, user_id=user.id)
-        return item
+        item = return_item(db, name, quantity, user_id=user.id)
+        return {
+            "message": f"Returned {quantity} {name}(s)",
+            "item": {
+                "available": item.available,
+                "in_use": item.in_use,
+                "threshold": item.threshold,
+            },
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -107,3 +120,16 @@ def api_get_status(
             detail="Item not found" if name else "No items found",
         )
     return data
+
+
+@app.get(
+    "/audit/logs",
+    response_model=list[AuditLogResponse],
+    summary="Get recent audit log entries",
+)
+def api_get_audit_logs(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    return get_recent_logs(db, limit)
