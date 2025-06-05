@@ -31,7 +31,8 @@ python inventory.py status
 ```
 
 Inventory data is stored in a SQLite database named `inventory.db` by default.
-Set `DATABASE_URL` to use a different database engine.
+Set `DATABASE_URL` to use a different database engine. The API also expects a
+`SECRET_KEY` environment variable used to sign JWT tokens.
 
 ## Running the API
 
