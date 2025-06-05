@@ -1,17 +1,17 @@
 Category	Features Covered
 Core Functionality	Add, issue, return, view stock
 CLI Interface	Simple and usable commands
-Storage (MVP)	JSON file-based storage
+Storage	SQLite/PostgreSQL database via SQLAlchemy
 Stock Alerts	Threshold warnings
+Security & Auth	JWT tokens and role-based roles
+Audit Logging	Item changes recorded in DB
 Roadmap Vision	Clear plan to expand into web, multi-user system
 Modular Architecture	Multi-agent, modular backend, API-focused
 REST API	FastAPI endpoints for add/issue/return/status
-
-🔍 What’s Missing (to make it production-grade):
 1. Security & Authentication
 Expectation	Why it Matters
-✅ Authenticated access (JWT, OAuth)	Only authorized users can view or manipulate inventory
-✅ Role-based permissions (RBAC)	Controls what different users (e.g., clerks vs. managers) can do
+✅ Authenticated access (JWT) - implemented
+✅ Role-based permissions - implemented
 🔒 Secure API endpoints	HTTPS, no anonymous access to protected data
 🔐 Password management	Hashing, reset tokens, possibly 2FA for admin accounts
 
