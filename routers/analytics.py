@@ -73,6 +73,32 @@ def start_audit_export(
     return {"task_id": task_id}
 
 
+@router.get("/audit/export", response_class=Response, summary="Export audit log CSV")
+def export_csv(
+    tenant_id: int,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    """Return a CSV of recent audit logs synchronously."""
+    logs = get_recent_logs(db, limit, tenant_id)
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["id", "user_id", "item_id", "action", "quantity", "timestamp"])
+    for log in logs:
+        writer.writerow(
+            [
+                log.id,
+                log.user_id,
+                log.item_id,
+                log.action,
+                log.quantity,
+                log.timestamp.isoformat(),
+            ]
+        )
+    return Response(content=output.getvalue(), media_type="text/csv")
+
+
 @router.get(
     "/audit/export/{task_id}",
     response_class=Response,

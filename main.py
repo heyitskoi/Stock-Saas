@@ -1,6 +1,6 @@
 import os
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -26,6 +26,7 @@ from schemas import (
 )
 from routers.users import router as users_router
 from routers.analytics import router as analytics_router
+from routers.auth_extra import router as auth_router
 
 app = FastAPI(title="Stock SaaS API")
 
@@ -47,6 +48,7 @@ app.add_middleware(
 Base.metadata.create_all(bind=engine)
 app.include_router(users_router)
 app.include_router(analytics_router)
+app.include_router(auth_router)
 
 
 @app.on_event("startup")
@@ -86,10 +88,13 @@ any_user = require_role(["admin", "manager", "user"])
 
 @app.post("/token")
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    return await login_for_access_token(form_data, db)
+    form = await request.form()
+    otp = form.get("otp")
+    return await login_for_access_token(form_data, db, otp)
 
 
 @app.post("/items/add", response_model=ItemResponse, summary="Add items to inventory")
