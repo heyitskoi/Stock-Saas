@@ -13,20 +13,24 @@ class ItemCreate(BaseModel):
     name: str
     quantity: int
     threshold: int = 0
+    tenant_id: int
 
 
 class ItemUpdate(BaseModel):
     name: str
+    tenant_id: int
     new_name: str | None = None
     threshold: int | None = None
 
 
 class ItemDelete(BaseModel):
     name: str
+    tenant_id: int
 
 
 class ItemResponse(ItemBase):
     id: int
+    tenant_id: int
 
     class Config:
         orm_mode = True
@@ -39,11 +43,13 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
     role: str = "user"
+    tenant_id: int
 
 
 class UserResponse(UserBase):
     id: int
     role: str
+    tenant_id: int
 
     class Config:
         orm_mode = True
@@ -67,6 +73,21 @@ class AuditLogResponse(BaseModel):
     action: str
     quantity: int
     timestamp: datetime
+
+    class Config:
+        orm_mode = True
+
+
+class TenantBase(BaseModel):
+    name: str
+
+
+class TenantCreate(TenantBase):
+    pass
+
+
+class TenantResponse(TenantBase):
+    id: int
 
     class Config:
         orm_mode = True

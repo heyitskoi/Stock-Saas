@@ -17,12 +17,17 @@ def create_user(
     db: Session = Depends(get_db),
     user: User = Depends(admin_only),
 ):
-    if db.query(User).filter(User.username == payload.username).first():
+    if (
+        db.query(User)
+        .filter(User.username == payload.username, User.tenant_id == payload.tenant_id)
+        .first()
+    ):
         raise HTTPException(status_code=400, detail="Username already registered")
     new_user = User(
         username=payload.username,
         hashed_password=get_password_hash(payload.password),
         role=payload.role,
+        tenant_id=payload.tenant_id,
     )
     db.add(new_user)
     db.commit()
@@ -32,10 +37,11 @@ def create_user(
 
 @router.get("/users/", response_model=list[UserResponse])
 def list_users(
+    tenant_id: int,
     db: Session = Depends(get_db),
     user: User = Depends(admin_only),
 ):
-    return db.query(User).all()
+    return db.query(User).filter(User.tenant_id == tenant_id).all()
 
 
 @router.put("/users/update", response_model=UserResponse)

@@ -1,18 +1,35 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from database import Base
+
+
+class Tenant(Base):
+    __tablename__ = "tenants"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+
+    users = relationship("User", back_populates="tenant")
+    items = relationship("Item", back_populates="tenant")
 
 
 class Item(Base):
     __tablename__ = "items"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
+    name = Column(String, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"))
     available = Column(Integer, default=0)
     in_use = Column(Integer, default=0)
     threshold = Column(Integer, default=0)
+
+    tenant = relationship("Tenant", back_populates="items")
+
+    __table_args__ = (
+        UniqueConstraint("name", "tenant_id", name="uix_name_tenant"),
+    )
 
 
 class User(Base):
@@ -22,6 +39,9 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     role = Column(String, default="user")
+    tenant_id = Column(Integer, ForeignKey("tenants.id"))
+
+    tenant = relationship("Tenant", back_populates="users")
 
 
 class AuditLog(Base):
