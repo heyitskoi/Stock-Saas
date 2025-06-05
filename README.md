@@ -36,6 +36,10 @@ Inventory data is stored in a SQLite database named `inventory.db` by default.
 Set `DATABASE_URL` to use a different database engine. You can also provide
 `ADMIN_USERNAME` and `ADMIN_PASSWORD` to specify the first admin user's
 credentials.
+=======
+Set `DATABASE_URL` to use a different database engine. The API also expects a
+`SECRET_KEY` environment variable used to sign JWT tokens.
+
 
 ## Running the API
 
@@ -51,3 +55,18 @@ uvicorn main:app --reload
 
 API endpoints mirror the CLI commands and are documented at `/docs` when the server is running.
 Authenticate by posting your username and password to `/token` and include the returned token using `Authorization: Bearer <token>`.
+
+## Running the Frontend
+
+A simple Next.js interface lives in the `frontend/` folder. It uses the API server described above.
+
+```bash
+# install frontend dependencies
+cd frontend && npm install
+
+# start the development server
+npm run dev
+```
+
+By default it expects the FastAPI backend to run on `http://localhost:8000`. You can change this by setting `NEXT_PUBLIC_API_URL` when starting the Next.js server.
+
