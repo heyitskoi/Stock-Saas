@@ -50,18 +50,23 @@ async def login(
     return await login_for_access_token(form_data, db)
 
 
-@app.post("/items/add", summary="Add items to inventory", response_model=ItemResponse)
+@app.post("/items/add", response_model=ItemResponse, summary="Add items to inventory")
 def api_add_item(
     payload: ItemCreate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
-    """Add quantity of an item to the inventory."""
-    item = add_item(db, payload.name, payload.quantity, payload.threshold, user_id=user.id)
+    item = add_item(
+        db,
+        payload.name,
+        payload.quantity,
+        payload.threshold,
+        user_id=user.id,
+    )
     return item
 
 
-@app.post("/items/issue", response_model=ItemResponse)
+@app.post("/items/issue", response_model=ItemResponse, summary="Issue items to a user")
 def api_issue_item(
     payload: ItemCreate,
     db: Session = Depends(get_db),
@@ -75,7 +80,7 @@ def api_issue_item(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/items/return", response_model=ItemResponse)
+@app.post("/items/return", response_model=ItemResponse, summary="Return issued items")
 def api_return_item(
     payload: ItemCreate,
     db: Session = Depends(get_db),

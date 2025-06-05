@@ -5,20 +5,9 @@ import tempfile
 db_fd, db_path = tempfile.mkstemp(prefix="test_api", suffix=".db")
 os.close(db_fd)
 
+# configure the database and secret key once for all tests
 os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
-# minimal secret for JWT signing during tests
-os.environ.setdefault("SECRET_KEY", "test-secret")
-
-os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
-os.environ.setdefault('SECRET_KEY', 'test-secret')
-
-
-
-# set secret key so auth module loads without error
-os.environ['SECRET_KEY'] = 'testsecret'
-
-
-
+os.environ["SECRET_KEY"] = "test-secret"
 
 from fastapi.testclient import TestClient
 from main import app
