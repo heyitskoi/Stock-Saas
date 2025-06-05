@@ -6,12 +6,12 @@ from typing import Callable
 import httpx
 from sqlalchemy.orm import Session
 
-from models import Item, Notification
+from models import Item, Notification, User
 
 
-def _send_email(message: str) -> None:
+def _send_email(message: str, recipient: str | None = None) -> None:
     smtp_server = os.getenv("SMTP_SERVER")
-    recipient = os.getenv("ALERT_EMAIL_TO")
+    recipient = recipient or os.getenv("ALERT_EMAIL_TO")
     sender = os.getenv("ALERT_EMAIL_FROM", "noreply@example.com")
     if not (smtp_server and recipient):
         return
@@ -37,21 +37,31 @@ def record_notification(db: Session, item: Item, message: str, channel: str) -> 
 
 def check_thresholds(
     db: Session,
-    email_func: Callable[[str], None] | None = _send_email,
+    email_func: Callable[[str, str | None], None] | None = _send_email,
     slack_func: Callable[[str], None] | None = _send_slack,
 ) -> None:
     low_items = (
-        db.query(Item)
-        .filter(Item.threshold > 0, Item.available < Item.threshold)
-        .all()
+        db.query(Item).filter(Item.threshold > 0, Item.available < Item.threshold).all()
     )
+    if not low_items:
+        return
+
+    users = db.query(User).all()
     for item in low_items:
         text = f"Item '{item.name}' is below threshold: {item.available} < {item.threshold}"
-        if email_func:
-            email_func(text)
-            record_notification(db, item, text, "email")
-        if slack_func:
-            slack_func(text)
-            record_notification(db, item, text, "slack")
-    if low_items:
-        db.commit()
+        if users:
+            for u in users:
+                if u.notification_preference == "email" and email_func:
+                    email_func(text, u.username)
+                    record_notification(db, item, text, "email")
+                elif u.notification_preference == "slack" and slack_func:
+                    slack_func(text)
+                    record_notification(db, item, text, "slack")
+        else:
+            if email_func:
+                email_func(text, None)
+                record_notification(db, item, text, "email")
+            if slack_func:
+                slack_func(text)
+                record_notification(db, item, text, "slack")
+    db.commit()
