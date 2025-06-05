@@ -51,58 +51,41 @@ async def login(
 
 
 
-@app.post("/items/add")
-=======
-@app.post("/items/add", summary="Add items to inventory")
-
+@app.post("/items/add", summary="Add items to inventory", response_model=ItemResponse)
 def api_add_item(
-    name: str,
-    quantity: int,
-    threshold: int = 0,
+    payload: ItemCreate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
+    """Add quantity of an item to the inventory."""
+    item = add_item(db, payload.name, payload.quantity, payload.threshold, user_id=user.id)
+    return item
 
 
-
-@app.post("/items/issue")
+@app.post("/items/issue", response_model=ItemResponse)
 def api_issue_item(
-    name: str,
-    quantity: int,
+    payload: ItemCreate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
+    """Issue quantity of an item from the inventory."""
     try:
-        item = issue_item(db, name, quantity, user_id=user.id)
-        return {
-            "message": f"Issued {quantity} {name}(s)",
-            "item": {
-                "available": item.available,
-                "in_use": item.in_use,
-                "threshold": item.threshold,
-            },
-        }
+        item = issue_item(db, payload.name, payload.quantity, user_id=user.id)
+        return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/items/return")
+@app.post("/items/return", response_model=ItemResponse)
 def api_return_item(
-    name: str,
-    quantity: int,
+    payload: ItemCreate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
+    """Return quantity of an item to the inventory."""
     try:
-        item = return_item(db, name, quantity, user_id=user.id)
-        return {
-            "message": f"Returned {quantity} {name}(s)",
-            "item": {
-                "available": item.available,
-                "in_use": item.in_use,
-                "threshold": item.threshold,
-            },
-        }
+        item = return_item(db, payload.name, payload.quantity, user_id=user.id)
+        return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
