@@ -29,14 +29,7 @@ def _build_csv(db: Session, limit: int, tenant_id: int) -> str:
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow(
-        [
-            "id",
-            "user_id",
-            "item_id",
-            "action",
-            "quantity",
-            "timestamp",
-        ]
+        ["id", "user_id", "item_id", "action", "quantity", "timestamp"]
     )
     for log in logs:
         writer.writerow(
