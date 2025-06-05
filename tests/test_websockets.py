@@ -1,0 +1,87 @@
+import os
+os.environ.setdefault("SECRET_KEY", "test-secret")
+from fastapi.testclient import TestClient
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+import database
+import main
+from models import User, Tenant
+from auth import get_password_hash
+
+
+@pytest.fixture
+def client():
+    import tempfile
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
+    tmp.close()
+    engine = create_engine(f"sqlite:///{tmp.name}", connect_args={"check_same_thread": False})
+    TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+
+    # Patch database and main modules to use in-memory DB
+    database.engine = engine
+    database.SessionLocal = TestingSessionLocal
+    main.engine = engine
+    main.SessionLocal = TestingSessionLocal
+    main.app.router.on_startup.clear()
+
+    database.Base.metadata.create_all(bind=engine)
+
+    # Create default admin and tenant
+    db = TestingSessionLocal()
+    tenant = Tenant(name="default")
+    db.add(tenant)
+    db.commit()
+    db.refresh(tenant)
+    admin = User(
+        username="admin",
+        hashed_password=get_password_hash("admin"),
+        role="admin",
+        tenant_id=tenant.id,
+        notification_preference="email",
+    )
+    db.add(admin)
+    db.commit()
+    db.close()
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    main.app.dependency_overrides[database.get_db] = override_get_db
+
+    with TestClient(main.app) as c:
+        if hasattr(main.app.state, "rate_limiter"):
+            main.app.state.rate_limiter.attempts.clear()
+        yield c
+
+    main.app.dependency_overrides.clear()
+    os.remove(tmp.name)
+
+
+def _get_token(client: TestClient) -> str:
+    resp = client.post("/token", data={"username": "admin", "password": "admin"})
+    assert resp.status_code == 200
+    return resp.json()["access_token"]
+
+
+def test_websocket_receives_inventory_updates(client):
+    token = _get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    with client.websocket_connect("/ws/inventory/1") as ws:
+        resp = client.post(
+            "/items/add",
+            json={"name": "ws-item", "quantity": 1, "threshold": 0, "tenant_id": 1},
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = ws.receive_json()
+        assert data["event"] == "update"
+        assert data["item"] == "ws-item"
+        assert data["available"] == 1
+        assert data["in_use"] == 0
