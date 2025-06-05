@@ -135,6 +135,8 @@ origin specified in `NEXT_PUBLIC_API_URL`.
 
 After logging in you will see the dashboard listing all items. Links are provided to pages for adding new stock, issuing items and recording returns. Each form uses the JWT token stored in `localStorage` to authenticate API requests.
 
+Admins can also open `/users` to manage accounts. The page lists existing users and includes a form to create new ones.
+
 
 
 ## Running with Docker
