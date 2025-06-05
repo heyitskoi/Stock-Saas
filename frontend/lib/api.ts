@@ -74,6 +74,19 @@ export async function returnItem(token: string, item: { name: string; quantity: 
   return res.json();
 }
 
+export async function exportAuditCSV(token: string, limit = 100): Promise<string> {
+  const res = await fetch(`${API_URL}/analytics/audit/export?limit=${limit}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to export CSV');
+  }
+  return res.text();
+}
+
 export async function createUser(
   token: string,
   user: { username: string; password: string; role: string }

@@ -145,6 +145,23 @@ def test_audit_log_endpoint(client):
     assert len(logs) == 2
     assert all('action' in entry for entry in logs)
 
+
+def test_export_audit_csv(client):
+    token = get_token(client)
+    headers = {'Authorization': f'Bearer {token}'}
+
+    client.post(
+        '/items/add',
+        json={'name': 'csvitem', 'quantity': 1, 'threshold': 0},
+        headers=headers,
+    )
+
+    resp = client.get('/analytics/audit/export', params={'limit': 1}, headers=headers)
+    assert resp.status_code == 200
+    assert resp.headers['content-type'].startswith('text/csv')
+    lines = resp.text.strip().splitlines()
+    assert lines[0].startswith('id,user_id,item_id,action,quantity,timestamp')
+
 def test_add_item_no_token(client):
     resp = client.post(
         '/items/add',
