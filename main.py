@@ -50,7 +50,11 @@ async def login(
     return await login_for_access_token(form_data, db)
 
 
+
+@app.post("/items/add")
+=======
 @app.post("/items/add", summary="Add items to inventory")
+
 def api_add_item(
     name: str,
     quantity: int,
@@ -60,35 +64,45 @@ def api_add_item(
 ):
 
 
-    item = add_item(db, item_data.name, item_data.quantity, item_data.threshold, user_id=user.id)
-    return item
 
-
-
-
-
-@app.post("/items/issue", response_model=ItemResponse, summary="Issue items to a user")
+@app.post("/items/issue")
 def api_issue_item(
-    item_data: ItemCreate,
+    name: str,
+    quantity: int,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
     try:
-        item = issue_item(db, item_data.name, item_data.quantity, user_id=user.id)
-        return item
+        item = issue_item(db, name, quantity, user_id=user.id)
+        return {
+            "message": f"Issued {quantity} {name}(s)",
+            "item": {
+                "available": item.available,
+                "in_use": item.in_use,
+                "threshold": item.threshold,
+            },
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/items/return", response_model=ItemResponse, summary="Return issued items")
+@app.post("/items/return")
 def api_return_item(
-    item_data: ItemCreate,
+    name: str,
+    quantity: int,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
     try:
-        item = return_item(db, item_data.name, item_data.quantity, user_id=user.id)
-        return item
+        item = return_item(db, name, quantity, user_id=user.id)
+        return {
+            "message": f"Returned {quantity} {name}(s)",
+            "item": {
+                "available": item.available,
+                "in_use": item.in_use,
+                "threshold": item.threshold,
+            },
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
