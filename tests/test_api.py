@@ -33,9 +33,13 @@ def get_token(client):
 def test_add_item_endpoint(client):
     token = get_token(client)
     headers = {'Authorization': f'Bearer {token}'}
-    resp = client.post('/items/add', params={'name': 'mouse', 'quantity': 2, 'threshold': 1}, headers=headers)
+    resp = client.post(
+        '/items/add',
+        json={'name': 'mouse', 'quantity': 2, 'threshold': 1},
+        headers=headers,
+    )
     assert resp.status_code == 200
-    assert resp.json()['item']['available'] == 2
+    assert resp.json()['available'] == 2
 
     status_resp = client.get('/items/status', params={'name': 'mouse'}, headers=headers)
     assert status_resp.status_code == 200
