@@ -5,6 +5,7 @@ import tempfile
 db_fd, db_path = tempfile.mkstemp(prefix="test_api", suffix=".db")
 os.close(db_fd)
 os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
+os.environ.setdefault('SECRET_KEY', 'test-secret')
 
 from fastapi.testclient import TestClient
 from main import app
@@ -35,8 +36,44 @@ def test_add_item_endpoint(client):
     headers = {'Authorization': f'Bearer {token}'}
     resp = client.post('/items/add', json={'name': 'mouse', 'quantity': 2, 'threshold': 1}, headers=headers)
     assert resp.status_code == 200
-    assert resp.json()['item']['available'] == 2
+    assert resp.json()['available'] == 2
 
     status_resp = client.get('/items/status', params={'name': 'mouse'}, headers=headers)
     assert status_resp.status_code == 200
     assert status_resp.json()['mouse']['available'] == 2
+
+
+def test_add_item_no_token(client):
+    resp = client.post(
+        '/items/add',
+        json={'name': 'noauth', 'quantity': 1, 'threshold': 0},
+    )
+    assert resp.status_code == 401
+
+
+def test_add_item_user_role(client):
+    from database import SessionLocal
+    from models import User
+    from auth import get_password_hash
+
+    db = SessionLocal()
+    user = User(
+        username='regular',
+        hashed_password=get_password_hash('regular'),
+        role='user',
+    )
+    db.add(user)
+    db.commit()
+    db.close()
+
+    resp = client.post('/token', data={'username': 'regular', 'password': 'regular'})
+    assert resp.status_code == 200
+    token = resp.json()['access_token']
+    headers = {'Authorization': f'Bearer {token}'}
+
+    resp = client.post(
+        '/items/add',
+        json={'name': 'user-item', 'quantity': 1, 'threshold': 0},
+        headers=headers,
+    )
+    assert resp.status_code == 403
