@@ -7,8 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.websockets import WebSocketDisconnect
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import Base, engine, get_db, SessionLocal, DATABASE_URL
+from database_async import get_async_db
 from inventory_core import (
     add_item,
     issue_item,
@@ -17,6 +19,13 @@ from inventory_core import (
     get_recent_logs,
     update_item,
     delete_item,
+    async_add_item,
+    async_issue_item,
+    async_return_item,
+    async_get_status,
+    async_get_recent_logs,
+    async_update_item,
+    async_delete_item,
 )
 from auth import login_for_access_token, require_role, get_password_hash
 from models import User, Tenant
@@ -120,7 +129,7 @@ any_user = require_role(["admin", "manager", "user"])
 @app.post("/token")
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ):
     """Authenticate a user and return a JWT access token."""
     return await login_for_access_token(form_data, db)
@@ -129,10 +138,10 @@ async def login(
 @app.post("/items/add", response_model=ItemResponse, summary="Add items to inventory")
 async def api_add_item(
     payload: ItemCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     user: User = Depends(admin_or_manager),
 ):
-    item = add_item(
+    item = await async_add_item(
         db,
         payload.name,
         payload.quantity,
@@ -153,11 +162,11 @@ async def api_add_item(
 @app.post("/items/issue", response_model=ItemResponse, summary="Issue items to a user")
 async def api_issue_item(
     payload: ItemCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     user: User = Depends(admin_or_manager),
 ):
     try:
-        item = issue_item(
+        item = await async_issue_item(
             db,
             payload.name,
             payload.quantity,
@@ -179,11 +188,11 @@ async def api_issue_item(
 @app.post("/items/return", response_model=ItemResponse, summary="Return issued items")
 async def api_return_item(
     payload: ItemCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     user: User = Depends(admin_or_manager),
 ):
     try:
-        item = return_item(
+        item = await async_return_item(
             db,
             payload.name,
             payload.quantity,
@@ -231,11 +240,11 @@ def api_get_audit_logs(
 @app.put("/items/update", response_model=ItemResponse, summary="Update an item")
 async def api_update_item(
     payload: ItemUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     user: User = Depends(admin_or_manager),
 ):
     try:
-        item = update_item(
+        item = await async_update_item(
             db,
             payload.name,
             tenant_id=payload.tenant_id,
@@ -258,11 +267,11 @@ async def api_update_item(
 @app.delete("/items/delete", summary="Delete an item")
 async def api_delete_item(
     payload: ItemDelete,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     user: User = Depends(admin_or_manager),
 ):
     try:
-        delete_item(
+        await async_delete_item(
             db,
             payload.name,
             tenant_id=payload.tenant_id,
