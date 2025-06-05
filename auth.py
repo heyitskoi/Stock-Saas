@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 import os
+from dotenv import load_dotenv
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -10,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User
+
+load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:

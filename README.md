@@ -86,7 +86,7 @@ pip install pytest
 pytest
 ```
 
-The `requirements.txt` file pins `httpx` to `<0.25` to remain compatible with
+The `requirements.txt` file pins `httpx` to `0.27.*` to remain compatible with
 `starlette==0.27.0`.
 
 The tests use an in-memory SQLite database so they will not modify any local data files.
@@ -128,11 +128,17 @@ curl -H "Authorization: Bearer <token>" \
   'http://localhost:8000/audit/logs?limit=5'
 ```
 
-You can also export the same data as CSV for reporting:
+You can also export the same data as CSV for reporting. The export runs in the
+background so large reports do not block the request:
 
 ```bash
+# start the export and note the returned task_id
+curl -X POST -H "Authorization: Bearer <token>" \
+  'http://localhost:8000/analytics/audit/export?limit=100'
+
+# download the generated file using the task_id from above
 curl -H "Authorization: Bearer <token>" \
-  'http://localhost:8000/analytics/audit/export?limit=100' -o audit_log.csv
+  'http://localhost:8000/analytics/audit/export/<task_id>' -o audit_log.csv
 ```
 
 ## Running the Frontend
