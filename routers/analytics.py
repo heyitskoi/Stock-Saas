@@ -7,6 +7,7 @@ from fastapi import (
 )
 from inventory_core import get_recent_logs
 from database import SessionLocal, get_db
+from sqlalchemy.orm import Session
 from auth import require_role
 import csv
 from io import StringIO

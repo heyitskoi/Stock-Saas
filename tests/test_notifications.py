@@ -35,3 +35,19 @@ def test_notification_logs_created():
     logs = db.query(Notification).all()
     assert len(logs) == 2
     assert all(log.item_id == item.id for log in logs)
+
+
+def test_no_notifications_when_stock_ok():
+    db = setup_db()
+    item = Item(name="stapler", available=5, in_use=0, threshold=2)
+    db.add(item)
+    db.commit()
+
+    emails = []
+    slacks = []
+
+    check_thresholds(db, email_func=emails.append, slack_func=slacks.append)
+
+    assert emails == []
+    assert slacks == []
+    assert db.query(Notification).count() == 0
