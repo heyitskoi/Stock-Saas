@@ -35,10 +35,8 @@ python inventory.py status
 Inventory data is stored in a SQLite database named `inventory.db` by default.
 Set `DATABASE_URL` to use a different database engine. You can also provide
 `ADMIN_USERNAME` and `ADMIN_PASSWORD` to specify the first admin user's
-credentials.
-=======
-Set `DATABASE_URL` to use a different database engine. The API also expects a
-`SECRET_KEY` environment variable used to sign JWT tokens.
+credentials. The API also expects a `SECRET_KEY` environment variable used to
+sign JWT tokens.
 
 
 ## Running the API
@@ -67,7 +65,6 @@ pytest
 ```
 
 The tests use an in-memory SQLite database so they will not modify any local data files.
-=======
 ### Example requests
 
 Each item endpoint expects a JSON body matching the `ItemCreate` schema:
@@ -93,9 +90,8 @@ curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/js
 
 # return items
 curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
-  -d '{"name":"headphones","quantity":1}' http://localhost:8000/items/return
+-d '{"name":"headphones","quantity":1}' http://localhost:8000/items/return
 ```
-=======
 ## Running the Frontend
 
 A simple Next.js interface lives in the `frontend/` folder. It uses the API server described above.

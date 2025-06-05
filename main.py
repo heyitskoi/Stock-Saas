@@ -60,15 +60,9 @@ def api_add_item(
 ):
 
 
-    item = add_item(db, name, quantity, threshold, user_id=user.id)
-    return {
-        "message": f"Added {quantity} {name}(s)",
-        "item": {
-            "available": item.available,
-            "in_use": item.in_use,
-            "threshold": item.threshold,
-        },
-    }
+    item = add_item(db, item_data.name, item_data.quantity, item_data.threshold, user_id=user.id)
+    return item
+
 
 
 
