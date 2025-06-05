@@ -107,3 +107,21 @@ npm run dev
 By default it expects the FastAPI backend to run on `http://localhost:8000`. You can change this by setting `NEXT_PUBLIC_API_URL` when starting the Next.js server.
 
 
+
+## Running with Docker
+
+A `Dockerfile` is provided to containerize the FastAPI service. Build and run it locally:
+
+```bash
+docker build -t stock-saas-backend .
+docker run -e SECRET_KEY=mysecret -p 8000:8000 stock-saas-backend
+```
+
+To start the backend together with a PostgreSQL database and the Next.js frontend use `docker-compose`:
+
+```bash
+docker-compose up --build
+```
+
+The API will be available on `http://localhost:8000` and the frontend on `http://localhost:3000`.
+

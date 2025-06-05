@@ -38,6 +38,7 @@ def test_add_item_endpoint(client):
         json={'name': 'mouse', 'quantity': 2, 'threshold': 1},
         headers=headers,
     )
+
     assert resp.status_code == 200
     assert resp.json()['available'] == 2
 
