@@ -58,7 +58,9 @@ def test_issue_insufficient_stock(db):
 def test_update_and_delete(db):
     session, tenant_id = db
     add_item(session, "phone", 2, threshold=1, tenant_id=tenant_id)
-    item = update_item(session, "phone", tenant_id=tenant_id, new_name="smartphone", threshold=5)
+    item = update_item(
+        session, "phone", tenant_id=tenant_id, new_name="smartphone", threshold=5
+    )
     assert item.name == "smartphone"
     assert item.threshold == 5
 
