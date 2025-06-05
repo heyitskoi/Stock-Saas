@@ -50,7 +50,11 @@ async def login(
     return await login_for_access_token(form_data, db)
 
 
+
 @app.post("/items/add")
+=======
+@app.post("/items/add", summary="Add items to inventory")
+
 def api_add_item(
     name: str,
     quantity: int,
@@ -58,15 +62,6 @@ def api_add_item(
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
-    item = add_item(db, name, quantity, threshold, user_id=user.id)
-    return {
-        "message": f"Added {quantity} {name}(s)",
-        "item": {
-            "available": item.available,
-            "in_use": item.in_use,
-            "threshold": item.threshold,
-        },
-    }
 
 
 
