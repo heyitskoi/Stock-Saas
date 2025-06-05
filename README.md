@@ -92,6 +92,17 @@ curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/js
 curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
 -d '{"name":"headphones","quantity":1}' http://localhost:8000/items/return
 ```
+
+
+### Audit log entries
+
+Retrieve recent actions recorded in the audit log:
+
+```bash
+curl -H "Authorization: Bearer <token>" \
+  'http://localhost:8000/audit/logs?limit=5'
+```
+
 ## Running the Frontend
 
 A simple Next.js interface lives in the `frontend/` folder. It uses the API server described above.
