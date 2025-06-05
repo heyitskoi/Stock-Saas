@@ -6,10 +6,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db, SessionLocal, DATABASE_URL
-from inventory_core import add_item, issue_item, return_item, get_status, get_recent_logs
+from inventory_core import (
+    add_item,
+    issue_item,
+    return_item,
+    get_status,
+    get_recent_logs,
+    update_item,
+    delete_item,
+)
 from auth import login_for_access_token, require_role, get_password_hash
 from models import User
-from schemas import ItemCreate, ItemResponse, AuditLogResponse
+from schemas import (
+    ItemCreate,
+    ItemResponse,
+    AuditLogResponse,
+    ItemUpdate,
+    ItemDelete,
+)
 from routers.users import router as users_router
 
 app = FastAPI(title="Stock SaaS API")
@@ -138,3 +152,35 @@ def api_get_audit_logs(
     user: User = Depends(admin_or_manager),
 ):
     return get_recent_logs(db, limit)
+
+
+@app.put("/items/update", response_model=ItemResponse, summary="Update an item")
+def api_update_item(
+    payload: ItemUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    try:
+        item = update_item(
+            db,
+            payload.name,
+            new_name=payload.new_name,
+            threshold=payload.threshold,
+            user_id=user.id,
+        )
+        return item
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.delete("/items/delete", summary="Delete an item")
+def api_delete_item(
+    payload: ItemDelete,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    try:
+        delete_item(db, payload.name, user_id=user.id)
+        return {"detail": "Item deleted"}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

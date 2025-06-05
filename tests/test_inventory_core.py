@@ -3,7 +3,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from models import Base
-from inventory_core import add_item, issue_item, return_item, get_status
+from inventory_core import (
+    add_item,
+    issue_item,
+    return_item,
+    get_status,
+    update_item,
+    delete_item,
+)
 
 
 @pytest.fixture
@@ -39,3 +46,14 @@ def test_issue_insufficient_stock(db):
     add_item(db, "laptop", 1, threshold=0)
     with pytest.raises(ValueError):
         issue_item(db, "laptop", 2)
+
+
+def test_update_and_delete(db):
+    add_item(db, "phone", 2, threshold=1)
+    item = update_item(db, "phone", new_name="smartphone", threshold=5)
+    assert item.name == "smartphone"
+    assert item.threshold == 5
+
+    delete_item(db, "smartphone")
+    status = get_status(db, "smartphone")
+    assert status == {}
