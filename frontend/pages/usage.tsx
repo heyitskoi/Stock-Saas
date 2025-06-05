@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getItems, getItemUsage } from '../lib/api';
+import { getOverallUsage } from '../lib/api';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -24,27 +24,32 @@ ChartJS.register(
 );
 
 export default function UsagePage() {
-  const [items, setItems] = useState<string[]>([]);
-  const [selected, setSelected] = useState('');
   const [usage, setUsage] = useState<any[]>([]);
+  const [tenantId, setTenantId] = useState(1);
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    getItems(token).then((data) => {
-      const names = Object.keys(data);
-      setItems(names);
-      if (names.length) {
-        setSelected(names[0]);
-      }
-    });
+    const now = new Date();
+    const until = now.toISOString().slice(0, 10);
+    const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    setStart(since);
+    setEnd(until);
   }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token || !selected) return;
-    getItemUsage(token, selected).then(setUsage).catch(() => setUsage([]));
-  }, [selected]);
+    if (!token || !start || !end) return;
+    getOverallUsage(token, {
+      tenant_id: tenantId,
+      start: start,
+      end: end,
+    })
+      .then(setUsage)
+      .catch(() => setUsage([]));
+  }, [tenantId, start, end]);
 
   const chartData = {
     labels: usage.map((u) => u.date),
@@ -66,21 +71,36 @@ export default function UsagePage() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Item Usage</h1>
+      <h1>Usage Analytics</h1>
       <Link href="/">Back</Link>
       <div style={{ margin: '20px 0' }}>
-        <label htmlFor="item">Item: </label>
-        <select
-          id="item"
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-        >
-          {items.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
+        <label style={{ marginRight: 10 }}>
+          Tenant ID:
+          <input
+            type="number"
+            value={tenantId}
+            onChange={(e) => setTenantId(Number(e.target.value))}
+            style={{ marginLeft: 5 }}
+          />
+        </label>
+        <label style={{ marginRight: 10 }}>
+          Start:
+          <input
+            type="date"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            style={{ marginLeft: 5 }}
+          />
+        </label>
+        <label>
+          End:
+          <input
+            type="date"
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+            style={{ marginLeft: 5 }}
+          />
+        </label>
       </div>
       <Line data={chartData} />
     </div>

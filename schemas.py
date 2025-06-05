@@ -38,6 +38,7 @@ class ItemResponse(ItemBase):
 
 class UserBase(BaseModel):
     username: str
+    notification_preference: str = "email"
 
 
 class UserCreate(UserBase):
@@ -60,6 +61,7 @@ class UserUpdate(BaseModel):
     username: str | None = None
     password: str | None = None
     role: str | None = None
+    notification_preference: str | None = None
 
 
 class UserDelete(BaseModel):
