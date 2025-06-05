@@ -2,12 +2,14 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from models import Base, Item, Notification
+from models import Base, Item, Notification, User
 from notifications import check_thresholds
 
 
 def setup_db():
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}
+    )
     Base.metadata.create_all(bind=engine)
     Session = sessionmaker(bind=engine)
     return Session()
@@ -19,11 +21,17 @@ def test_notification_logs_created():
     db.add(item)
     db.commit()
 
-    emails = []
-    slacks = []
+    db.add_all([
+        User(username="e1@example.com", hashed_password="x", tenant_id=1, notification_preference="email"),
+        User(username="s1@example.com", hashed_password="x", tenant_id=1, notification_preference="slack"),
+    ])
+    db.commit()
 
-    def fake_email(msg):
-        emails.append(msg)
+    emails: list[str] = []
+    slacks: list[str] = []
+
+    def fake_email(msg, to=None):
+        emails.append(to or "")
 
     def fake_slack(msg):
         slacks.append(msg)

@@ -28,6 +28,7 @@ def create_user(
         hashed_password=get_password_hash(payload.password),
         role=payload.role,
         tenant_id=payload.tenant_id,
+        notification_preference=payload.notification_preference,
     )
     db.add(new_user)
     db.commit()
@@ -65,6 +66,8 @@ def update_user(
         user_obj.hashed_password = get_password_hash(payload.password)
     if payload.role:
         user_obj.role = payload.role
+    if payload.notification_preference:
+        user_obj.notification_preference = payload.notification_preference
     db.commit()
     db.refresh(user_obj)
     return user_obj

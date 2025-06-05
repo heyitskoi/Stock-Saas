@@ -21,6 +21,30 @@ the backend knows which tenant's inventory to operate on.
 You can use the CLI or the API to manage inventory. When available stock falls
 below a configured threshold, a warning is displayed during the status check.
 
+## Quickstart
+
+1. Copy `.env.example` to `.env` and adjust values.
+   Required settings include `DATABASE_URL`, `SECRET_KEY`,
+   `ADMIN_USERNAME`, `ADMIN_PASSWORD` and `NEXT_PUBLIC_API_URL` for the
+   frontend. Optional variables configure background workers:
+   `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`, `SLACK_WEBHOOK_URL`,
+   `SMTP_SERVER`, `ALERT_EMAIL_TO` and `ALERT_EMAIL_FROM`.
+2. Install Python dependencies and start the API:
+
+```bash
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+3. Run the Celery worker to process stock alerts and CSV exports:
+
+```bash
+celery -A tasks worker -B
+```
+
+4. Open `http://localhost:8000/docs` and include `tenant_id` on every request
+   to scope data to the correct tenant.
+
 ## Basic usage
 
 ```bash
@@ -195,3 +219,5 @@ The API will be available on `http://localhost:8000` and the frontend on `http:/
 ## Stock level notifications
 
 A Celery beat task checks inventory every hour (configurable via `STOCK_CHECK_INTERVAL`) and sends alerts when available stock falls below the configured threshold. Alerts can be sent via Slack using `SLACK_WEBHOOK_URL` or via email using `SMTP_SERVER` and `ALERT_EMAIL_TO`. Each alert is recorded in the `notifications` table.
+
+Users can choose whether they prefer email or Slack messages by setting the `notification_preference` field on their account. Notifications are delivered once per user based on this setting.
