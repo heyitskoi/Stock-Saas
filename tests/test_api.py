@@ -14,6 +14,7 @@ from main import app
 
 
 import pytest
+from tests.factories import UserFactory, ItemFactory, AuditLogFactory
 
 
 @pytest.fixture
@@ -25,6 +26,11 @@ def client():
 def teardown_module(module):
     if os.path.exists(db_path):
         os.remove(db_path)
+    try:
+        from tests.factories import _session as factory_session
+        factory_session.close()
+    except Exception:
+        pass
 
 
 def get_token(client):
@@ -150,11 +156,7 @@ def test_export_audit_csv(client):
     token = get_token(client)
     headers = {'Authorization': f'Bearer {token}'}
 
-    client.post(
-        '/items/add',
-        json={'name': 'csvitem', 'quantity': 1, 'threshold': 0},
-        headers=headers,
-    )
+    AuditLogFactory(action='add', quantity=1)
 
     resp = client.get('/analytics/audit/export', params={'limit': 1}, headers=headers)
     assert resp.status_code == 200
@@ -171,19 +173,7 @@ def test_add_item_no_token(client):
 
 
 def test_add_item_user_role(client):
-    from database import SessionLocal
-    from models import User
-    from auth import get_password_hash
-
-    db = SessionLocal()
-    user = User(
-        username='regular',
-        hashed_password=get_password_hash('regular'),
-        role='user',
-    )
-    db.add(user)
-    db.commit()
-    db.close()
+    UserFactory(username='regular', password='regular', role='user')
 
     resp = client.post('/token', data={'username': 'regular', 'password': 'regular'})
     assert resp.status_code == 200
@@ -219,19 +209,7 @@ def test_create_and_list_users(client):
 
 
 def test_users_admin_required(client):
-    from database import SessionLocal
-    from models import User
-    from auth import get_password_hash
-
-    db = SessionLocal()
-    user = User(
-        username='limited',
-        hashed_password=get_password_hash('limited'),
-        role='user',
-    )
-    db.add(user)
-    db.commit()
-    db.close()
+    UserFactory(username='limited', password='limited', role='user')
 
     resp = client.post('/token', data={'username': 'limited', 'password': 'limited'})
     assert resp.status_code == 200
@@ -253,11 +231,7 @@ def test_update_and_delete_endpoints(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
 
-    client.post(
-        "/items/add",
-        json={"name": "desk", "quantity": 1, "threshold": 0},
-        headers=headers,
-    )
+    ItemFactory(name="desk", available=1, threshold=0)
 
     update_resp = client.put(
         "/items/update",

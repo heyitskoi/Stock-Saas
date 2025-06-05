@@ -6,4 +6,5 @@ passlib[bcrypt]
 python-multipart
 
 httpx==0.27.*
+factory-boy
 
