@@ -2,10 +2,17 @@
 
 A simple inventory tracker for a small department store room.
 
-This project provides a command line tool `inventory.py` that stores data in
-`inventory.json`. You can use it to add items, issue them to users, return
-items, and check stock levels. When available stock falls below a configured
-threshold, a warning is displayed during the status check.
+The project started as a CLI backed by a JSON file but now persists data in a
+SQL database using SQLAlchemy. SQLite is used by default for local development
+and you can point `DATABASE_URL` to a PostgreSQL database in production. Every
+change to an item is written to an audit log table so history can be reviewed.
+
+User accounts are stored in the same database. Authentication is handled with
+JWT tokens and basic role based access control (admin, manager, user). A default
+`admin` account with password `admin` is created at startup.
+
+You can use the CLI or the API to manage inventory. When available stock falls
+below a configured threshold, a warning is displayed during the status check.
 
 ## Basic usage
 
@@ -23,7 +30,8 @@ python inventory.py return headphones 1
 python inventory.py status
 ```
 
-Inventory data is stored locally in `inventory.json` in the project directory.
+Inventory data is stored in a SQLite database named `inventory.db` by default.
+Set `DATABASE_URL` to use a different database engine.
 
 ## Running the API
 
@@ -38,3 +46,4 @@ uvicorn main:app --reload
 ```
 
 API endpoints mirror the CLI commands and are documented at `/docs` when the server is running.
+Authenticate by posting your username and password to `/token` and include the returned token using `Authorization: Bearer <token>`.
