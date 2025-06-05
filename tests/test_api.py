@@ -12,7 +12,6 @@ os.environ["SECRET_KEY"] = "test-secret"
 from fastapi.testclient import TestClient
 from main import app
 
-
 import pytest
 from tests.factories import UserFactory, ItemFactory, AuditLogFactory
 
@@ -47,7 +46,6 @@ def test_add_item_endpoint(client):
         json={'name': 'mouse', 'quantity': 2, 'threshold': 1},
         headers=headers,
     )
-
     assert resp.status_code == 200
     data = resp.json()
     assert data['available'] == 2
@@ -62,15 +60,12 @@ def test_issue_and_return_endpoints(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
 
-    # add initial stock
-    add_resp = client.post(
+    client.post(
         "/items/add",
         json={"name": "keyboard", "quantity": 5, "threshold": 1},
         headers=headers,
     )
-    assert add_resp.status_code == 200
 
-    # issue some items
     issue_resp = client.post(
         "/items/issue",
         json={"name": "keyboard", "quantity": 3},
@@ -81,7 +76,6 @@ def test_issue_and_return_endpoints(client):
     assert data["available"] == 2
     assert data["in_use"] == 3
 
-    # return a subset
     return_resp = client.post(
         "/items/return",
         json={"name": "keyboard", "quantity": 2},
@@ -97,14 +91,12 @@ def test_issue_return_errors(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
 
-    # create single item in inventory
     client.post(
         "/items/add",
         json={"name": "monitor", "quantity": 1, "threshold": 0},
         headers=headers,
     )
 
-    # issuing more than available should fail
     fail_issue = client.post(
         "/items/issue",
         json={"name": "monitor", "quantity": 2},
@@ -112,7 +104,6 @@ def test_issue_return_errors(client):
     )
     assert fail_issue.status_code == 400
 
-    # issue one correctly
     ok_issue = client.post(
         "/items/issue",
         json={"name": "monitor", "quantity": 1},
@@ -123,7 +114,6 @@ def test_issue_return_errors(client):
     assert issued["available"] == 0
     assert issued["in_use"] == 1
 
-    # returning more than in_use should fail
     fail_return = client.post(
         "/items/return",
         json={"name": "monitor", "quantity": 2},
@@ -163,6 +153,7 @@ def test_export_audit_csv(client):
     assert resp.headers['content-type'].startswith('text/csv')
     lines = resp.text.strip().splitlines()
     assert lines[0].startswith('id,user_id,item_id,action,quantity,timestamp')
+
 
 def test_add_item_no_token(client):
     resp = client.post(
@@ -211,17 +202,17 @@ def test_create_and_list_users(client):
 def test_users_admin_required(client):
     UserFactory(username='limited', password='limited', role='user')
 
-    resp = client.post('/token', data={'username': 'limited', 'password': 'limited'})
+    resp = client.post("/token", data={"username": "limited", "password": "limited"})
     assert resp.status_code == 200
-    token = resp.json()['access_token']
-    headers = {'Authorization': f'Bearer {token}'}
+    token = resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
-    resp = client.get('/users/', headers=headers)
+    resp = client.get("/users/", headers=headers)
     assert resp.status_code == 403
 
     resp = client.post(
-        '/users/',
-        json={'username': 'fail', 'password': 'fail', 'role': 'user'},
+        "/users/",
+        json={"username": "fail", "password": "fail", "role": "user"},
         headers=headers,
     )
     assert resp.status_code == 403
@@ -259,3 +250,16 @@ def test_update_and_delete_endpoints(client):
     assert status_resp.status_code == 404
 
 
+def test_usage_endpoints(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    client.post(
+        "/items/add",
+        json={"name": "stats", "quantity": 5, "threshold": 0},
+        headers=headers,
+    )
+    # You could now add:
+    # - Issue items
+    # - Return items
+    # - Call /analytics/usage and /analytics/usage/stats

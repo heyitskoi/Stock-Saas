@@ -14,9 +14,7 @@ Base.metadata.create_all(bind=engine)
 
 def add_item(db, name: str, qty: int, threshold: int):
     item = core_add_item(db, name, qty, threshold)
-    print(
-        f"Added {qty} {name}(s). Available: {item.available}"
-    )
+    print(f"Added {qty} {name}(s). Available: {item.available}")
 
 
 def issue_item(db, name: str, qty: int):
@@ -24,7 +22,7 @@ def issue_item(db, name: str, qty: int):
         item = core_issue_item(db, name, qty)
         print(f"Issued {qty} {name}(s). In use: {item.in_use}")
     except ValueError:
-        print('Not enough stock to issue')
+        print("Not enough stock to issue")
 
 
 def return_item(db, name: str, qty: int):
@@ -32,13 +30,13 @@ def return_item(db, name: str, qty: int):
         item = core_return_item(db, name, qty)
         print(f"Returned {qty} {name}(s). Available: {item.available}")
     except ValueError:
-        print('Invalid return quantity')
+        print("Invalid return quantity")
 
 
 def status(db, name: str = None):
     items = get_status(db, name)
     if not items:
-        print('No items found')
+        print("No items found")
         return
     for k, item in items.items():
         available = item["available"]
@@ -50,41 +48,42 @@ def status(db, name: str = None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Simple inventory manager')
-    subparsers = parser.add_subparsers(dest='command')
+    parser = argparse.ArgumentParser(description="Simple inventory manager")
+    subparsers = parser.add_subparsers(dest="command")
 
-    add_p = subparsers.add_parser('add')
-    add_p.add_argument('name')
-    add_p.add_argument('quantity', type=int)
-    add_p.add_argument('--threshold', type=int, default=None)
+    add_p = subparsers.add_parser("add")
+    add_p.add_argument("name")
+    add_p.add_argument("quantity", type=int)
+    add_p.add_argument("--threshold", type=int, default=None)
 
-    issue_p = subparsers.add_parser('issue')
-    issue_p.add_argument('name')
-    issue_p.add_argument('quantity', type=int)
+    issue_p = subparsers.add_parser("issue")
+    issue_p.add_argument("name")
+    issue_p.add_argument("quantity", type=int)
 
-    return_p = subparsers.add_parser('return')
-    return_p.add_argument('name')
-    return_p.add_argument('quantity', type=int)
+    return_p = subparsers.add_parser("return")
+    return_p.add_argument("name")
+    return_p.add_argument("quantity", type=int)
 
-    status_p = subparsers.add_parser('status')
-    status_p.add_argument('name', nargs='?')
+    status_p = subparsers.add_parser("status")
+    status_p.add_argument("name", nargs="?")
 
     args = parser.parse_args()
 
     db = SessionLocal()
     try:
-        if args.command == 'add':
+        if args.command == "add":
             add_item(db, args.name, args.quantity, args.threshold or 0)
-        elif args.command == 'issue':
+        elif args.command == "issue":
             issue_item(db, args.name, args.quantity)
-        elif args.command == 'return':
+        elif args.command == "return":
             return_item(db, args.name, args.quantity)
-        elif args.command == 'status':
+        elif args.command == "status":
             status(db, args.name)
         else:
             parser.print_help()
     finally:
         db.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -56,7 +56,8 @@ export default function Home() {
       <nav style={{ marginBottom: 20 }}>
         <Link href="/add" style={{ marginRight: 10 }}>Add Item</Link>
         <Link href="/issue" style={{ marginRight: 10 }}>Issue Item</Link>
-        <Link href="/return">Return Item</Link>
+        <Link href="/return" style={{ marginRight: 10 }}>Return Item</Link>
+        <Link href="/usage">Usage Graphs</Link>
       </nav>
       {isAdmin && (
         <button onClick={handleDownload} style={{ marginBottom: 20 }}>
