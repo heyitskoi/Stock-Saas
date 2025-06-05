@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { listUsers, createUser } from '../lib/api';
+import { listUsers, createUser, deleteUser } from '../lib/api';
 
 export default function UsersPage() {
   const router = useRouter();
@@ -40,6 +40,17 @@ export default function UsersPage() {
     }
   }
 
+  async function handleDelete(id: number) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      await deleteUser(token, id);
+      setUsers(users.filter((u) => u.id !== id));
+    } catch {
+      setError('Failed to delete user');
+    }
+  }
+
   return (
     <div style={{ padding: 20 }}>
       <h1>Manage Users</h1>
@@ -66,7 +77,20 @@ export default function UsersPage() {
       <h2>Existing Users</h2>
       <ul>
         {users.map((u) => (
-          <li key={u.id}>{u.username} - {u.role}</li>
+          <li key={u.id}>
+            {u.username} - {u.role}
+            <button
+              onClick={() =>
+                router.push(`/edit-user?id=${u.id}&username=${u.username}&role=${u.role}`)
+              }
+              style={{ marginLeft: 5 }}
+            >
+              Edit
+            </button>
+            <button onClick={() => handleDelete(u.id)} style={{ marginLeft: 5 }}>
+              Delete
+            </button>
+          </li>
         ))}
       </ul>
     </div>

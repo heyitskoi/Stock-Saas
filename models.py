@@ -56,3 +56,14 @@ class AuditLog(Base):
 
     user = relationship("User")
     item = relationship("Item")
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("items.id"))
+    message = Column(String)
+    channel = Column(String)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+    item = relationship("Item")

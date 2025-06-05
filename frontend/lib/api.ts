@@ -29,7 +29,10 @@ export async function getItems(token: string) {
   return res.json();
 }
 
-export async function addItem(token: string, item: { name: string; quantity: number; threshold: number }) {
+export async function addItem(
+  token: string,
+  item: { name: string; quantity: number; threshold: number }
+) {
   const res = await fetch(`${API_URL}/items/add`, {
     method: 'POST',
     headers: {
@@ -44,7 +47,10 @@ export async function addItem(token: string, item: { name: string; quantity: num
   return res.json();
 }
 
-export async function issueItem(token: string, item: { name: string; quantity: number; threshold: number }) {
+export async function issueItem(
+  token: string,
+  item: { name: string; quantity: number; threshold: number }
+) {
   const res = await fetch(`${API_URL}/items/issue`, {
     method: 'POST',
     headers: {
@@ -59,7 +65,10 @@ export async function issueItem(token: string, item: { name: string; quantity: n
   return res.json();
 }
 
-export async function returnItem(token: string, item: { name: string; quantity: number; threshold: number }) {
+export async function returnItem(
+  token: string,
+  item: { name: string; quantity: number; threshold: number }
+) {
   const res = await fetch(`${API_URL}/items/return`, {
     method: 'POST',
     headers: {
@@ -147,6 +156,58 @@ export async function listUsers(token: string) {
 
   if (!res.ok) {
     throw new Error('Failed to load users');
+  }
+  return res.json();
+}
+
+export async function updateUser(
+  token: string,
+  user: { id: number; username?: string; password?: string; role?: string }
+) {
+  const res = await fetch(`${API_URL}/users/update`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(user),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to update user');
+  }
+  return res.json();
+}
+
+export async function deleteUser(token: string, id: number) {
+  const res = await fetch(`${API_URL}/users/delete`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ id }),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to delete user');
+  }
+  return res.json();
+}
+
+export async function getItemUsage(
+  token: string,
+  name: string,
+  days = 30
+) {
+  const res = await fetch(
+    `${API_URL}/analytics/usage/${name}?days=${days}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) {
+    throw new Error('Failed to load usage');
   }
   return res.json();
 }

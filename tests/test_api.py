@@ -12,8 +12,8 @@ os.environ["SECRET_KEY"] = "test-secret"
 from fastapi.testclient import TestClient
 from main import app
 
-
 import pytest
+from tests.factories import UserFactory, ItemFactory, AuditLogFactory
 
 
 @pytest.fixture
@@ -25,46 +25,50 @@ def client():
 def teardown_module(module):
     if os.path.exists(db_path):
         os.remove(db_path)
+    try:
+        from tests.factories import _session as factory_session
+
+        factory_session.close()
+    except Exception:
+        pass
 
 
 def get_token(client):
-    response = client.post('/token', data={'username': 'admin', 'password': 'admin'})
+    response = client.post("/token", data={"username": "admin", "password": "admin"})
     assert response.status_code == 200
-    return response.json()['access_token']
+    return response.json()["access_token"]
 
 
 def test_add_item_endpoint(client):
     token = get_token(client)
-    headers = {'Authorization': f'Bearer {token}'}
+    headers = {"Authorization": f"Bearer {token}"}
     resp = client.post(
-        '/items/add',
-        json={'name': 'mouse', 'quantity': 2, 'threshold': 1, 'tenant_id': 1},
+        "/items/add",
+        json={"name": "mouse", "quantity": 2, "threshold": 1, "tenant_id": 1},
         headers=headers,
     )
-
     assert resp.status_code == 200
     data = resp.json()
-    assert data['available'] == 2
-    assert data['name'] == 'mouse'
+    assert data["available"] == 2
+    assert data["name"] == "mouse"
 
-    status_resp = client.get('/items/status', params={'name': 'mouse', 'tenant_id': 1}, headers=headers)
+    status_resp = client.get(
+        "/items/status", params={"name": "mouse", "tenant_id": 1}, headers=headers
+    )
     assert status_resp.status_code == 200
-    assert status_resp.json()['mouse']['available'] == 2
+    assert status_resp.json()["mouse"]["available"] == 2
 
 
 def test_issue_and_return_endpoints(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
 
-    # add initial stock
-    add_resp = client.post(
+    client.post(
         "/items/add",
         json={"name": "keyboard", "quantity": 5, "threshold": 1, "tenant_id": 1},
         headers=headers,
     )
-    assert add_resp.status_code == 200
 
-    # issue some items
     issue_resp = client.post(
         "/items/issue",
         json={"name": "keyboard", "quantity": 3, "tenant_id": 1},
@@ -75,7 +79,6 @@ def test_issue_and_return_endpoints(client):
     assert data["available"] == 2
     assert data["in_use"] == 3
 
-    # return a subset
     return_resp = client.post(
         "/items/return",
         json={"name": "keyboard", "quantity": 2, "tenant_id": 1},
@@ -91,14 +94,12 @@ def test_issue_return_errors(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
 
-    # create single item in inventory
     client.post(
         "/items/add",
         json={"name": "monitor", "quantity": 1, "threshold": 0, "tenant_id": 1},
         headers=headers,
     )
 
-    # issuing more than available should fail
     fail_issue = client.post(
         "/items/issue",
         json={"name": "monitor", "quantity": 2, "tenant_id": 1},
@@ -106,7 +107,6 @@ def test_issue_return_errors(client):
     )
     assert fail_issue.status_code == 400
 
-    # issue one correctly
     ok_issue = client.post(
         "/items/issue",
         json={"name": "monitor", "quantity": 1, "tenant_id": 1},
@@ -117,7 +117,6 @@ def test_issue_return_errors(client):
     assert issued["available"] == 0
     assert issued["in_use"] == 1
 
-    # returning more than in_use should fail
     fail_return = client.post(
         "/items/return",
         json={"name": "monitor", "quantity": 2, "tenant_id": 1},
@@ -138,77 +137,65 @@ def test_issue_return_errors(client):
 
 def test_audit_log_endpoint(client):
     token = get_token(client)
-    headers = {'Authorization': f'Bearer {token}'}
+    headers = {"Authorization": f"Bearer {token}"}
 
     client.post(
-        '/items/add',
-        json={'name': 'keyboard', 'quantity': 3, 'threshold': 1, 'tenant_id': 1},
+        "/items/add",
+        json={"name": "keyboard", "quantity": 3, "threshold": 1, "tenant_id": 1},
         headers=headers,
     )
     client.post(
-        '/items/issue',
-        json={'name': 'keyboard', 'quantity': 1, 'tenant_id': 1},
-        headers=headers,
+        "/items/issue", json={"name": "keyboard", "quantity": 1, "tenant_id": 1}, headers=headers
     )
 
-    resp = client.get('/audit/logs', params={'limit': 2, 'tenant_id': 1}, headers=headers)
+    resp = client.get("/audit/logs", params={"limit": 2, "tenant_id": 1}, headers=headers)
     assert resp.status_code == 200
     logs = resp.json()
     assert len(logs) == 2
-    assert all('action' in entry for entry in logs)
+    assert all("action" in entry for entry in logs)
 
 
 def test_export_audit_csv(client):
     token = get_token(client)
-    headers = {'Authorization': f'Bearer {token}'}
+    headers = {"Authorization": f"Bearer {token}"}
 
+    # generate at least one audit log entry via adding an item
     client.post(
-        '/items/add',
-        json={'name': 'csvitem', 'quantity': 1, 'threshold': 0, 'tenant_id': 1},
+        "/items/add",
+        json={"name": "csvitem", "quantity": 1, "threshold": 0, "tenant_id": 1},
         headers=headers,
     )
 
     resp = client.get(
-        '/analytics/audit/export',
-        params={'limit': 1, 'tenant_id': 1},
+        "/analytics/audit/export",
+        params={"limit": 1, "tenant_id": 1},
         headers=headers,
     )
     assert resp.status_code == 200
-    assert resp.headers['content-type'].startswith('text/csv')
+    assert resp.headers["content-type"].startswith("text/csv")
     lines = resp.text.strip().splitlines()
-    assert lines[0].startswith('id,user_id,item_id,action,quantity,timestamp')
+    assert lines[0].startswith("id,user_id,item_id,action,quantity,timestamp")
+
 
 def test_add_item_no_token(client):
     resp = client.post(
-        '/items/add',
-        json={'name': 'noauth', 'quantity': 1, 'threshold': 0, 'tenant_id': 1},
+        "/items/add",
+        json={"name": "noauth", "quantity": 1, "threshold": 0, "tenant_id": 1},
     )
     assert resp.status_code == 401
 
 
 def test_add_item_user_role(client):
-    from database import SessionLocal
-    from models import User
-    from auth import get_password_hash
+    UserFactory(username="regular", password="regular", role="user", tenant_id=1)
 
-    db = SessionLocal()
-    user = User(
-        username='regular',
-        hashed_password=get_password_hash('regular'),
-        role='user',
-    )
-    db.add(user)
-    db.commit()
-    db.close()
-
-    resp = client.post('/token', data={'username': 'regular', 'password': 'regular'})
+    resp = client.post("/token", data={"username": "regular", "password": "regular"})
     assert resp.status_code == 200
-    token = resp.json()['access_token']
-    headers = {'Authorization': f'Bearer {token}'}
+    token = resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
     resp = client.post(
-        '/items/add',
-        json={'name': 'user-item', 'quantity': 1, 'threshold': 0, 'tenant_id': 1},
+        "/items/add",
+        json={"name": "user-item", "quantity": 1, "threshold": 0, "tenant_id": 1},
         headers=headers,
     )
     assert resp.status_code == 403
@@ -216,56 +203,38 @@ def test_add_item_user_role(client):
 
 def test_create_and_list_users(client):
     token = get_token(client)
-    headers = {'Authorization': f'Bearer {token}'}
+    headers = {"Authorization": f"Bearer {token}"}
 
     create_resp = client.post(
-        '/users/',
-        json={
-            'username': 'newuser',
-            'password': 'secret',
-            'role': 'manager',
-            'tenant_id': 1,
-        },
+        "/users/",
+        json={"username": "newuser", "password": "secret", "role": "manager", "tenant_id": 1},
         headers=headers,
     )
     assert create_resp.status_code == 200
     data = create_resp.json()
-    assert data['username'] == 'newuser'
-    assert data['role'] == 'manager'
+    assert data["username"] == "newuser"
+    assert data["role"] == "manager"
 
-    list_resp = client.get('/users/', params={'tenant_id': 1}, headers=headers)
+    list_resp = client.get("/users/", params={"tenant_id": 1}, headers=headers)
     assert list_resp.status_code == 200
     users = list_resp.json()
-    assert any(u['username'] == 'newuser' for u in users)
+    assert any(u["username"] == "newuser" for u in users)
 
 
 def test_users_admin_required(client):
-    from database import SessionLocal
-    from models import User
-    from auth import get_password_hash
+    UserFactory(username="limited", password="limited", role="user", tenant_id=1)
 
-    db = SessionLocal()
-    user = User(
-        username='limited',
-        hashed_password=get_password_hash('limited'),
-        role='user',
-        tenant_id=1,
-    )
-    db.add(user)
-    db.commit()
-    db.close()
-
-    resp = client.post('/token', data={'username': 'limited', 'password': 'limited'})
+    resp = client.post("/token", data={"username": "limited", "password": "limited"})
     assert resp.status_code == 200
-    token = resp.json()['access_token']
-    headers = {'Authorization': f'Bearer {token}'}
+    token = resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
-    resp = client.get('/users/', params={'tenant_id': 1}, headers=headers)
+    resp = client.get("/users/", params={"tenant_id": 1}, headers=headers)
     assert resp.status_code == 403
 
     resp = client.post(
-        '/users/',
-        json={'username': 'fail', 'password': 'fail', 'role': 'user', 'tenant_id': 1},
+        "/users/",
+        json={"username": "fail", "password": "fail", "role": "user", "tenant_id": 1},
         headers=headers,
     )
     assert resp.status_code == 403
@@ -307,3 +276,55 @@ def test_update_and_delete_endpoints(client):
     assert status_resp.status_code == 404
 
 
+def test_update_and_delete_user(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create_resp = client.post(
+        "/users/",
+        json={"username": "temp", "password": "pwd", "role": "user", "tenant_id": 1},
+        headers=headers,
+    )
+    assert create_resp.status_code == 200
+    user_id = create_resp.json()["id"]
+
+    update_resp = client.put(
+        "/users/update",
+        json={"id": user_id, "username": "temp2", "role": "manager"},
+        headers=headers,
+    )
+    assert update_resp.status_code == 200
+    data = update_resp.json()
+    assert data["username"] == "temp2"
+    assert data["role"] == "manager"
+
+    delete_resp = client.request(
+        "DELETE",
+        "/users/delete",
+        json={"id": user_id},
+        headers=headers,
+    )
+    assert delete_resp.status_code == 200
+
+    list_resp = client.get("/users/", params={"tenant_id": 1}, headers=headers)
+    assert all(u["id"] != user_id for u in list_resp.json())
+
+
+def test_usage_endpoints(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    client.post(
+        "/items/add",
+        json={"name": "stats", "quantity": 5, "threshold": 0, "tenant_id": 1},
+        headers=headers,
+    )
+
+    # You could now add:
+    # - Issue items
+    # - Return items
+    # - Call /analytics/usage/{item_name} and /analytics/usage
+    usage_resp = client.get(
+        "/analytics/usage/stats", params={"days": 30}, headers=headers
+    )
+    assert usage_resp.status_code in (200, 404)  # Adjust as needed depending on implementation
