@@ -145,10 +145,14 @@ def test_audit_log_endpoint(client):
         headers=headers,
     )
     client.post(
-        "/items/issue", json={"name": "keyboard", "quantity": 1, "tenant_id": 1}, headers=headers
+        "/items/issue",
+        json={"name": "keyboard", "quantity": 1, "tenant_id": 1},
+        headers=headers,
     )
 
-    resp = client.get("/audit/logs", params={"limit": 2, "tenant_id": 1}, headers=headers)
+    resp = client.get(
+        "/audit/logs", params={"limit": 2, "tenant_id": 1}, headers=headers
+    )
     assert resp.status_code == 200
     logs = resp.json()
     assert len(logs) == 2
@@ -207,7 +211,12 @@ def test_create_and_list_users(client):
 
     create_resp = client.post(
         "/users/",
-        json={"username": "newuser", "password": "secret", "role": "manager", "tenant_id": 1},
+        json={
+            "username": "newuser",
+            "password": "secret",
+            "role": "manager",
+            "tenant_id": 1,
+        },
         headers=headers,
     )
     assert create_resp.status_code == 200
@@ -327,4 +336,7 @@ def test_usage_endpoints(client):
     usage_resp = client.get(
         "/analytics/usage/stats", params={"days": 30}, headers=headers
     )
-    assert usage_resp.status_code in (200, 404)  # Adjust as needed depending on implementation
+    assert usage_resp.status_code in (
+        200,
+        404,
+    )  # Adjust as needed depending on implementation

@@ -50,7 +50,7 @@ def status(db, tenant_id: int, name: str = None):
 
 def main():
     parser = argparse.ArgumentParser(description="Simple inventory manager")
-    parser.add_argument('--tenant', type=int, default=1)
+    parser.add_argument("--tenant", type=int, default=1)
     subparsers = parser.add_subparsers(dest="command")
 
     add_p = subparsers.add_parser("add")
