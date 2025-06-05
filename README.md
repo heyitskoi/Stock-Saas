@@ -219,3 +219,5 @@ The API will be available on `http://localhost:8000` and the frontend on `http:/
 ## Stock level notifications
 
 A Celery beat task checks inventory every hour (configurable via `STOCK_CHECK_INTERVAL`) and sends alerts when available stock falls below the configured threshold. Alerts can be sent via Slack using `SLACK_WEBHOOK_URL` or via email using `SMTP_SERVER` and `ALERT_EMAIL_TO`. Each alert is recorded in the `notifications` table.
+
+Users can choose whether they prefer email or Slack messages by setting the `notification_preference` field on their account. Notifications are delivered once per user based on this setting.

@@ -98,6 +98,7 @@ def create_default_admin():
             hashed_password=get_password_hash(password),
             role="admin",
             tenant_id=tenant.id,
+            notification_preference="email",
         )
         db.add(admin)
         db.commit()
