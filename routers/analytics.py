@@ -7,6 +7,7 @@ from fastapi import (
 )
 from inventory_core import get_recent_logs
 from database import SessionLocal, get_db
+from sqlalchemy.orm import Session
 from auth import require_role
 import csv
 from io import StringIO
@@ -42,6 +43,34 @@ def _generate_csv(limit: int, tenant_id: int, task_id: str) -> None:
         export_tasks[task_id] = output.getvalue()
     finally:
         db.close()
+
+
+@router.get(
+    "/audit/export",
+    response_class=Response,
+    summary="Export audit log CSV immediately",
+)
+def export_audit_csv(
+    tenant_id: int,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    """Synchronously generate and return audit log CSV for a tenant."""
+    logs = get_recent_logs(db, limit, tenant_id)
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["id", "user_id", "item_id", "action", "quantity", "timestamp"])
+    for log in logs:
+        writer.writerow([
+            log.id,
+            log.user_id,
+            log.item_id,
+            log.action,
+            log.quantity,
+            log.timestamp.isoformat(),
+        ])
+    return Response(content=output.getvalue(), media_type="text/csv")
 
 
 @router.post(
