@@ -1,6 +1,7 @@
 import os
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, WebSocket
+from starlette.websockets import WebSocketDisconnect
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -26,8 +27,11 @@ from schemas import (
 )
 from routers.users import router as users_router
 from routers.analytics import router as analytics_router
+import asyncio
+from websocket_manager import InventoryWSManager
 
 app = FastAPI(title="Stock SaaS API")
+ws_manager = InventoryWSManager()
 
 # configure CORS so the frontend can access the API
 frontend_origin = os.getenv("NEXT_PUBLIC_API_URL")
@@ -47,6 +51,16 @@ app.add_middleware(
 Base.metadata.create_all(bind=engine)
 app.include_router(users_router)
 app.include_router(analytics_router)
+
+
+@app.websocket("/ws/inventory/{tenant_id}")
+async def inventory_ws(websocket: WebSocket, tenant_id: int):
+    await ws_manager.connect(websocket, tenant_id)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, tenant_id)
 
 
 @app.on_event("startup")
@@ -93,7 +107,7 @@ async def login(
 
 
 @app.post("/items/add", response_model=ItemResponse, summary="Add items to inventory")
-def api_add_item(
+async def api_add_item(
     payload: ItemCreate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
@@ -106,11 +120,18 @@ def api_add_item(
         payload.tenant_id,
         user_id=user.id,
     )
+    asyncio.create_task(ws_manager.broadcast(payload.tenant_id, {
+        "event": "update",
+        "item": item.name,
+        "available": item.available,
+        "in_use": item.in_use,
+        "threshold": item.threshold,
+    }))
     return item
 
 
 @app.post("/items/issue", response_model=ItemResponse, summary="Issue items to a user")
-def api_issue_item(
+async def api_issue_item(
     payload: ItemCreate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
@@ -124,13 +145,20 @@ def api_issue_item(
             tenant_id=payload.tenant_id,
             user_id=user.id,
         )
+        asyncio.create_task(ws_manager.broadcast(payload.tenant_id, {
+            "event": "update",
+            "item": item.name,
+            "available": item.available,
+            "in_use": item.in_use,
+            "threshold": item.threshold,
+        }))
         return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/items/return", response_model=ItemResponse, summary="Return issued items")
-def api_return_item(
+async def api_return_item(
     payload: ItemCreate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
@@ -144,6 +172,13 @@ def api_return_item(
             tenant_id=payload.tenant_id,
             user_id=user.id,
         )
+        asyncio.create_task(ws_manager.broadcast(payload.tenant_id, {
+            "event": "update",
+            "item": item.name,
+            "available": item.available,
+            "in_use": item.in_use,
+            "threshold": item.threshold,
+        }))
         return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -180,7 +215,7 @@ def api_get_audit_logs(
 
 
 @app.put("/items/update", response_model=ItemResponse, summary="Update an item")
-def api_update_item(
+async def api_update_item(
     payload: ItemUpdate,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
@@ -194,13 +229,20 @@ def api_update_item(
             threshold=payload.threshold,
             user_id=user.id,
         )
+        asyncio.create_task(ws_manager.broadcast(payload.tenant_id, {
+            "event": "update",
+            "item": item.name,
+            "available": item.available,
+            "in_use": item.in_use,
+            "threshold": item.threshold,
+        }))
         return item
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
 
 @app.delete("/items/delete", summary="Delete an item")
-def api_delete_item(
+async def api_delete_item(
     payload: ItemDelete,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
@@ -212,6 +254,10 @@ def api_delete_item(
             tenant_id=payload.tenant_id,
             user_id=user.id,
         )
+        asyncio.create_task(ws_manager.broadcast(payload.tenant_id, {
+            "event": "delete",
+            "item": payload.name,
+        }))
         return {"detail": "Item deleted"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
