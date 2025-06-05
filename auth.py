@@ -8,8 +8,10 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
-from database import get_db
+from database_async import get_async_db
 from models import User
 
 load_dotenv()
@@ -32,8 +34,11 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
-    user = db.query(User).filter(User.username == username).first()
+async def authenticate_user(
+    db: AsyncSession, username: str, password: str
+) -> Optional[User]:
+    result = await db.execute(select(User).where(User.username == username))
+    user = result.scalars().first()
     if user and verify_password(password, user.hashed_password):
         return user
     return None
@@ -48,7 +53,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+    token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_async_db)
 ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -62,7 +67,8 @@ async def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = db.query(User).filter(User.username == username).first()
+    result = await db.execute(select(User).where(User.username == username))
+    user = result.scalars().first()
     if user is None:
         raise credentials_exception
     return user
@@ -78,9 +84,10 @@ def require_role(required_roles):
 
 
 async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_async_db),
 ):
-    user = authenticate_user(db, form_data.username, form_data.password)
+    user = await authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)

@@ -5,6 +5,7 @@ import tempfile
 db_fd, db_path = tempfile.mkstemp(prefix="test_api", suffix=".db")
 os.close(db_fd)
 os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+os.environ["ASYNC_DATABASE_URL"] = f"sqlite+aiosqlite:///{db_path}"
 os.environ["SECRET_KEY"] = "test-secret"
 
 from fastapi.testclient import TestClient
