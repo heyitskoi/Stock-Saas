@@ -2,6 +2,7 @@ import os
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db, SessionLocal, DATABASE_URL
@@ -11,6 +12,21 @@ from models import User
 from schemas import ItemCreate, ItemResponse, AuditLogResponse
 
 app = FastAPI(title="Stock SaaS API")
+
+# configure CORS so the frontend can access the API
+frontend_origin = os.getenv("NEXT_PUBLIC_API_URL")
+origins = [frontend_origin] if frontend_origin else []
+if DATABASE_URL.startswith("sqlite"):
+    # allow everything during local development and tests
+    origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 Base.metadata.create_all(bind=engine)
 
