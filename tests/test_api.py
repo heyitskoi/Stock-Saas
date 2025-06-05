@@ -181,3 +181,54 @@ def test_add_item_user_role(client):
     assert resp.status_code == 403
 
 
+def test_create_and_list_users(client):
+    token = get_token(client)
+    headers = {'Authorization': f'Bearer {token}'}
+
+    create_resp = client.post(
+        '/users/',
+        json={'username': 'newuser', 'password': 'secret', 'role': 'manager'},
+        headers=headers,
+    )
+    assert create_resp.status_code == 200
+    data = create_resp.json()
+    assert data['username'] == 'newuser'
+    assert data['role'] == 'manager'
+
+    list_resp = client.get('/users/', headers=headers)
+    assert list_resp.status_code == 200
+    users = list_resp.json()
+    assert any(u['username'] == 'newuser' for u in users)
+
+
+def test_users_admin_required(client):
+    from database import SessionLocal
+    from models import User
+    from auth import get_password_hash
+
+    db = SessionLocal()
+    user = User(
+        username='limited',
+        hashed_password=get_password_hash('limited'),
+        role='user',
+    )
+    db.add(user)
+    db.commit()
+    db.close()
+
+    resp = client.post('/token', data={'username': 'limited', 'password': 'limited'})
+    assert resp.status_code == 200
+    token = resp.json()['access_token']
+    headers = {'Authorization': f'Bearer {token}'}
+
+    resp = client.get('/users/', headers=headers)
+    assert resp.status_code == 403
+
+    resp = client.post(
+        '/users/',
+        json={'username': 'fail', 'password': 'fail', 'role': 'user'},
+        headers=headers,
+    )
+    assert resp.status_code == 403
+
+

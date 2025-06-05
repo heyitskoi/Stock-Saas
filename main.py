@@ -9,10 +9,12 @@ from inventory_core import add_item, issue_item, return_item, get_status, get_re
 from auth import login_for_access_token, require_role, get_password_hash
 from models import User
 from schemas import ItemCreate, ItemResponse, AuditLogResponse
+from routers.users import router as users_router
 
 app = FastAPI(title="Stock SaaS API")
 
 Base.metadata.create_all(bind=engine)
+app.include_router(users_router)
 
 
 @app.on_event("startup")
