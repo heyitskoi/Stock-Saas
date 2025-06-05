@@ -4,4 +4,4 @@ SQLAlchemy
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
-httpx
+httpx==0.27.*
