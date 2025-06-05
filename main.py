@@ -5,10 +5,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db, SessionLocal, DATABASE_URL
-from inventory_core import add_item, issue_item, return_item, get_status
+from inventory_core import add_item, issue_item, return_item, get_status, get_recent_logs
 from auth import login_for_access_token, require_role, get_password_hash
 from models import User
-from schemas import ItemCreate, ItemResponse
+from schemas import ItemCreate, ItemResponse, AuditLogResponse
 
 app = FastAPI(title="Stock SaaS API")
 
@@ -107,3 +107,16 @@ def api_get_status(
             detail="Item not found" if name else "No items found",
         )
     return data
+
+
+@app.get(
+    "/audit/logs",
+    response_model=list[AuditLogResponse],
+    summary="Get recent audit log entries",
+)
+def api_get_audit_logs(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    return get_recent_logs(db, limit)

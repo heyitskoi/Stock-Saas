@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from sqlalchemy.orm import Session
 from models import Item, AuditLog
 from datetime import datetime
@@ -72,3 +72,13 @@ def get_status(db: Session, name: Optional[str] = None) -> Dict[str, dict]:
                 "threshold": item.threshold,
             }
     return items
+
+
+def get_recent_logs(db: Session, limit: int = 10) -> List[AuditLog]:
+    """Return the most recent audit log entries."""
+    return (
+        db.query(AuditLog)
+        .order_by(AuditLog.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
