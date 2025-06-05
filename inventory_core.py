@@ -15,10 +15,23 @@ def _log_action(db: Session, user_id: Optional[int], item: Item, action: str, qu
     db.add(log)
 
 
-def add_item(db: Session, name: str, qty: int, threshold: int, user_id: Optional[int] = None) -> Item:
-    item = db.query(Item).filter(Item.name == name).first()
+def add_item(
+    db: Session,
+    name: str,
+    qty: int,
+    threshold: int,
+    tenant_id: int,
+    user_id: Optional[int] = None,
+) -> Item:
+    item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item:
-        item = Item(name=name, available=0, in_use=0, threshold=threshold)
+        item = Item(
+            name=name,
+            tenant_id=tenant_id,
+            available=0,
+            in_use=0,
+            threshold=threshold,
+        )
         db.add(item)
     item.available += qty
     if threshold is not None:
@@ -30,8 +43,10 @@ def add_item(db: Session, name: str, qty: int, threshold: int, user_id: Optional
     return item
 
 
-def issue_item(db: Session, name: str, qty: int, user_id: Optional[int] = None) -> Item:
-    item = db.query(Item).filter(Item.name == name).first()
+def issue_item(
+    db: Session, name: str, qty: int, tenant_id: int, user_id: Optional[int] = None
+) -> Item:
+    item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item or item.available < qty:
         raise ValueError("Not enough stock to issue")
     item.available -= qty
@@ -42,8 +57,10 @@ def issue_item(db: Session, name: str, qty: int, user_id: Optional[int] = None) 
     return item
 
 
-def return_item(db: Session, name: str, qty: int, user_id: Optional[int] = None) -> Item:
-    item = db.query(Item).filter(Item.name == name).first()
+def return_item(
+    db: Session, name: str, qty: int, tenant_id: int, user_id: Optional[int] = None
+) -> Item:
+    item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item or item.in_use < qty:
         raise ValueError("Invalid return quantity")
     item.in_use -= qty
@@ -54,10 +71,11 @@ def return_item(db: Session, name: str, qty: int, user_id: Optional[int] = None)
     return item
 
 
-def get_status(db: Session, name: Optional[str] = None) -> Dict[str, dict]:
+def get_status(db: Session, tenant_id: int, name: Optional[str] = None) -> Dict[str, dict]:
     items = {}
+    base_query = db.query(Item).filter(Item.tenant_id == tenant_id)
     if name:
-        item = db.query(Item).filter(Item.name == name).first()
+        item = base_query.filter(Item.name == name).first()
         if item:
             items[item.name] = {
                 "available": item.available,
@@ -65,7 +83,7 @@ def get_status(db: Session, name: Optional[str] = None) -> Dict[str, dict]:
                 "threshold": item.threshold,
             }
     else:
-        for item in db.query(Item).all():
+        for item in base_query.all():
             items[item.name] = {
                 "available": item.available,
                 "in_use": item.in_use,
@@ -74,25 +92,24 @@ def get_status(db: Session, name: Optional[str] = None) -> Dict[str, dict]:
     return items
 
 
-def get_recent_logs(db: Session, limit: int = 10) -> List[AuditLog]:
+def get_recent_logs(db: Session, limit: int = 10, tenant_id: int | None = None) -> List[AuditLog]:
     """Return the most recent audit log entries."""
-    return (
-        db.query(AuditLog)
-        .order_by(AuditLog.timestamp.desc())
-        .limit(limit)
-        .all()
-    )
+    query = db.query(AuditLog)
+    if tenant_id is not None:
+        query = query.join(Item).filter(Item.tenant_id == tenant_id)
+    return query.order_by(AuditLog.timestamp.desc()).limit(limit).all()
 
 
 def update_item(
     db: Session,
     name: str,
+    tenant_id: int,
     new_name: Optional[str] = None,
     threshold: Optional[int] = None,
     user_id: Optional[int] = None,
 ) -> Item:
     """Update an item's name and/or threshold."""
-    item = db.query(Item).filter(Item.name == name).first()
+    item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item:
         raise ValueError("Item not found")
     if new_name:
@@ -105,9 +122,11 @@ def update_item(
     return item
 
 
-def delete_item(db: Session, name: str, user_id: Optional[int] = None) -> None:
+def delete_item(
+    db: Session, name: str, tenant_id: int, user_id: Optional[int] = None
+) -> None:
     """Remove an item from the inventory."""
-    item = db.query(Item).filter(Item.name == name).first()
+    item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item:
         raise ValueError("Item not found")
     _log_action(db, user_id, item, "delete", 0)

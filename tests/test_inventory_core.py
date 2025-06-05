@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from models import Base
+from models import Base, Tenant
 from inventory_core import (
     add_item,
     issue_item,
@@ -19,41 +19,47 @@ def db():
     Base.metadata.create_all(bind=engine)
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     session = TestingSessionLocal()
+    tenant = Tenant(name="test")
+    session.add(tenant)
+    session.commit()
     try:
-        yield session
+        yield session, tenant.id
     finally:
         session.close()
 
 
 def test_add_issue_return(db):
-    item = add_item(db, "widget", 5, threshold=2)
+    session, tenant_id = db
+    item = add_item(session, "widget", 5, threshold=2, tenant_id=tenant_id)
     assert item.available == 5
     assert item.in_use == 0
 
-    item = issue_item(db, "widget", 3)
+    item = issue_item(session, "widget", 3, tenant_id=tenant_id)
     assert item.available == 2
     assert item.in_use == 3
 
-    item = return_item(db, "widget", 1)
+    item = return_item(session, "widget", 1, tenant_id=tenant_id)
     assert item.available == 3
     assert item.in_use == 2
 
-    status = get_status(db, "widget")
+    status = get_status(session, tenant_id=tenant_id, name="widget")
     assert status["widget"]["available"] == 3
 
 
 def test_issue_insufficient_stock(db):
-    add_item(db, "laptop", 1, threshold=0)
+    session, tenant_id = db
+    add_item(session, "laptop", 1, threshold=0, tenant_id=tenant_id)
     with pytest.raises(ValueError):
-        issue_item(db, "laptop", 2)
+        issue_item(session, "laptop", 2, tenant_id=tenant_id)
 
 
 def test_update_and_delete(db):
-    add_item(db, "phone", 2, threshold=1)
-    item = update_item(db, "phone", new_name="smartphone", threshold=5)
+    session, tenant_id = db
+    add_item(session, "phone", 2, threshold=1, tenant_id=tenant_id)
+    item = update_item(session, "phone", tenant_id=tenant_id, new_name="smartphone", threshold=5)
     assert item.name == "smartphone"
     assert item.threshold == 5
 
-    delete_item(db, "smartphone")
-    status = get_status(db, "smartphone")
+    delete_item(session, "smartphone", tenant_id=tenant_id)
+    status = get_status(session, tenant_id=tenant_id, name="smartphone")
     assert status == {}

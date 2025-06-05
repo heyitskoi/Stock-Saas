@@ -16,7 +16,7 @@ from inventory_core import (
     delete_item,
 )
 from auth import login_for_access_token, require_role, get_password_hash
-from models import User
+from models import User, Tenant
 from schemas import (
     ItemCreate,
     ItemResponse,
@@ -61,11 +61,19 @@ def create_default_admin():
         return
 
     db = SessionLocal()
+    tenant = db.query(Tenant).filter(Tenant.name == "default").first()
+    if not tenant:
+        tenant = Tenant(name="default")
+        db.add(tenant)
+        db.commit()
+        db.refresh(tenant)
+
     if not db.query(User).filter(User.username == username).first():
         admin = User(
             username=username,
             hashed_password=get_password_hash(password),
             role="admin",
+            tenant_id=tenant.id,
         )
         db.add(admin)
         db.commit()
@@ -95,6 +103,7 @@ def api_add_item(
         payload.name,
         payload.quantity,
         payload.threshold,
+        payload.tenant_id,
         user_id=user.id,
     )
     return item
@@ -108,7 +117,13 @@ def api_issue_item(
 ):
     """Issue quantity of an item from the inventory."""
     try:
-        item = issue_item(db, payload.name, payload.quantity, user_id=user.id)
+        item = issue_item(
+            db,
+            payload.name,
+            payload.quantity,
+            tenant_id=payload.tenant_id,
+            user_id=user.id,
+        )
         return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -122,7 +137,13 @@ def api_return_item(
 ):
     """Return quantity of an item to the inventory."""
     try:
-        item = return_item(db, payload.name, payload.quantity, user_id=user.id)
+        item = return_item(
+            db,
+            payload.name,
+            payload.quantity,
+            tenant_id=payload.tenant_id,
+            user_id=user.id,
+        )
         return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -130,11 +151,12 @@ def api_return_item(
 
 @app.get("/items/status")
 def api_get_status(
+    tenant_id: int,
     name: str | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(any_user),
 ):
-    data = get_status(db, name)
+    data = get_status(db, tenant_id=tenant_id, name=name)
     if not data:
         raise HTTPException(
             status_code=404,
@@ -149,11 +171,12 @@ def api_get_status(
     summary="Get recent audit log entries",
 )
 def api_get_audit_logs(
+    tenant_id: int,
     limit: int = 10,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
-    return get_recent_logs(db, limit)
+    return get_recent_logs(db, limit, tenant_id)
 
 
 @app.put("/items/update", response_model=ItemResponse, summary="Update an item")
@@ -166,6 +189,7 @@ def api_update_item(
         item = update_item(
             db,
             payload.name,
+            tenant_id=payload.tenant_id,
             new_name=payload.new_name,
             threshold=payload.threshold,
             user_id=user.id,
@@ -182,7 +206,12 @@ def api_delete_item(
     user: User = Depends(admin_or_manager),
 ):
     try:
-        delete_item(db, payload.name, user_id=user.id)
+        delete_item(
+            db,
+            payload.name,
+            tenant_id=payload.tenant_id,
+            user_id=user.id,
+        )
         return {"detail": "Item deleted"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

@@ -14,6 +14,10 @@ Credentials for the initial admin account are read from the environment
 variables `ADMIN_USERNAME` and `ADMIN_PASSWORD`. When running with the default
 SQLite database, missing values fall back to `admin`/`admin` for convenience.
 
+Inventory data is scoped by **tenant**. Every item and user belongs to a tenant
+record, identified by `tenant_id`. API requests must include this identifier so
+the backend knows which tenant's inventory to operate on.
+
 You can use the CLI or the API to manage inventory. When available stock falls
 below a configured threshold, a warning is displayed during the status check.
 
@@ -86,15 +90,18 @@ Issue and return operations ignore the `threshold` field but the same payload sh
 ```bash
 # add items
 curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
-  -d '{"name":"headphones","quantity":10,"threshold":5}' http://localhost:8000/items/add
+  -d '{"name":"headphones","quantity":10,"threshold":5,"tenant_id":1}' \
+  http://localhost:8000/items/add
 
 # issue items
 curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
-  -d '{"name":"headphones","quantity":2}' http://localhost:8000/items/issue
+  -d '{"name":"headphones","quantity":2,"tenant_id":1}' \
+  http://localhost:8000/items/issue
 
 # return items
 curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
--d '{"name":"headphones","quantity":1}' http://localhost:8000/items/return
+-d '{"name":"headphones","quantity":1,"tenant_id":1}' \
+  http://localhost:8000/items/return
 ```
 
 

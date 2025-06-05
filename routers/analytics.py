@@ -12,8 +12,13 @@ router = APIRouter(prefix="/analytics")
 admin_or_manager = require_role(["admin", "manager"])
 
 @router.get("/audit/export", response_class=Response, summary="Export audit log as CSV")
-def export_audit_csv(limit: int = 100, db: Session = Depends(get_db), user: User = Depends(admin_or_manager)):
-    logs = get_recent_logs(db, limit)
+def export_audit_csv(
+    tenant_id: int,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    logs = get_recent_logs(db, limit, tenant_id)
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow(["id", "user_id", "item_id", "action", "quantity", "timestamp"])
