@@ -212,7 +212,9 @@ To start the backend together with a PostgreSQL database and the Next.js fronten
 docker-compose up --build
 ```
 
-The API will be available on `http://localhost:8000` and the frontend on `http://localhost:3000`.
+The compose file also starts Redis along with Celery worker and beat containers
+for background tasks. The API will be available on `http://localhost:8000` and
+the frontend on `http://localhost:3000`.
 
 
 

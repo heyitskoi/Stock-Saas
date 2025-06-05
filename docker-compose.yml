@@ -19,6 +19,26 @@ services:
       - db
     ports:
       - "8000:8000"
+  redis:
+    image: redis:7
+  worker:
+    build: .
+    command: celery -A tasks worker --loglevel=info
+    environment:
+      DATABASE_URL: postgres://stock:stock@db:5432/stockdb
+      CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+  scheduler:
+    build: .
+    command: celery -A tasks beat --loglevel=info
+    environment:
+      DATABASE_URL: postgres://stock:stock@db:5432/stockdb
+      CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
   frontend:
     build:
       context: ./frontend
