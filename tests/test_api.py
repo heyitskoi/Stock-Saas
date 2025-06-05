@@ -170,7 +170,7 @@ def test_export_audit_csv(client):
     assert start.status_code == 200
     task_id = start.json()["task_id"]
 
-    # Polling for CSV availability
+    # Poll for export to complete
     for _ in range(5):
         resp = client.get(f"/analytics/audit/export/{task_id}", headers=headers)
         if resp.status_code == 200:
@@ -338,13 +338,38 @@ def test_usage_endpoints(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
 
+    item_name = "stats-analytics"
+
     client.post(
         "/items/add",
-        json={"name": "stats", "quantity": 5, "threshold": 0, "tenant_id": 1},
+        json={"name": item_name, "quantity": 5, "threshold": 0, "tenant_id": 1},
+        headers=headers,
+    )
+
+    client.post(
+        "/items/issue",
+        json={"name": item_name, "quantity": 3, "tenant_id": 1},
+        headers=headers,
+    )
+
+    client.post(
+        "/items/return",
+        json={"name": item_name, "quantity": 1, "tenant_id": 1},
         headers=headers,
     )
 
     usage_resp = client.get(
-        "/analytics/usage/stats", params={"days": 30}, headers=headers
+        f"/analytics/usage/{item_name}", params={"days": 30}, headers=headers
     )
-    assert usage_resp.status_code in (200, 404)
+    assert usage_resp.status_code == 200
+    usage_data = usage_resp.json()
+    total_issued = sum(entry["issued"] for entry in usage_data)
+    total_returned = sum(entry["returned"] for entry in usage_data)
+    assert total_issued == 3
+    assert total_returned == 1
+
+    overall_resp = client.get("/analytics/usage", params={"days": 30}, headers=headers)
+    assert overall_resp.status_code == 200
+    overall = overall_resp.json()
+    assert sum(e["issued"] for e in overall) >= 3
+    assert sum(e["returned"] for e in overall) >= 1
