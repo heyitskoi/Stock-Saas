@@ -5,6 +5,7 @@ from database import get_db
 from models import User
 from schemas import UserCreate, UserResponse, UserUpdate, UserDelete
 from auth import require_role, get_password_hash
+import pyotp
 
 router = APIRouter()
 
@@ -65,6 +66,10 @@ def update_user(
         user_obj.hashed_password = get_password_hash(payload.password)
     if payload.role:
         user_obj.role = payload.role
+    if payload.two_factor_enabled is not None:
+        user_obj.two_factor_enabled = payload.two_factor_enabled
+        if payload.two_factor_enabled and not user_obj.two_factor_secret:
+            user_obj.two_factor_secret = pyotp.random_base32()
     db.commit()
     db.refresh(user_obj)
     return user_obj

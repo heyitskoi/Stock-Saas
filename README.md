@@ -10,6 +10,10 @@ Administrators can export these logs as a CSV report via the API.
 
 User accounts are stored in the same database. Authentication is handled with
 JWT tokens and basic role based access control (admin, manager, user).
+Users can request a password reset which sends a token via email. The token can
+then be submitted with a new password to update credentials. Accounts may also
+enable optional two-factor authentication (TOTP) which requires an additional
+OTP code when logging in.
 Credentials for the initial admin account are read from the environment
 variables `ADMIN_USERNAME` and `ADMIN_PASSWORD`. When running with the default
 SQLite database, missing values fall back to `admin`/`admin` for convenience.

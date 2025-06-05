@@ -50,6 +50,7 @@ class UserResponse(UserBase):
     id: int
     role: str
     tenant_id: int
+    two_factor_enabled: bool = False
 
     class Config:
         orm_mode = True
@@ -60,6 +61,7 @@ class UserUpdate(BaseModel):
     username: str | None = None
     password: str | None = None
     role: str | None = None
+    two_factor_enabled: bool | None = None
 
 
 class UserDelete(BaseModel):
@@ -91,3 +93,12 @@ class TenantResponse(TenantBase):
 
     class Config:
         orm_mode = True
+
+
+class PasswordResetRequest(BaseModel):
+    username: str
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str

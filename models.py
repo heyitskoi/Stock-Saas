@@ -1,5 +1,13 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, UniqueConstraint
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    ForeignKey,
+    DateTime,
+    UniqueConstraint,
+    Boolean,
+)
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -27,9 +35,7 @@ class Item(Base):
 
     tenant = relationship("Tenant", back_populates="items")
 
-    __table_args__ = (
-        UniqueConstraint("name", "tenant_id", name="uix_name_tenant"),
-    )
+    __table_args__ = (UniqueConstraint("name", "tenant_id", name="uix_name_tenant"),)
 
 
 class User(Base):
@@ -40,6 +46,8 @@ class User(Base):
     hashed_password = Column(String)
     role = Column(String, default="user")
     tenant_id = Column(Integer, ForeignKey("tenants.id"))
+    two_factor_secret = Column(String, nullable=True)
+    two_factor_enabled = Column(Boolean, default=False)
 
     tenant = relationship("Tenant", back_populates="users")
 
@@ -57,6 +65,7 @@ class AuditLog(Base):
     user = relationship("User")
     item = relationship("Item")
 
+
 class Notification(Base):
     __tablename__ = "notifications"
 
@@ -67,3 +76,14 @@ class Notification(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     item = relationship("Item")
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    token = Column(String, unique=True, index=True)
+    expires_at = Column(DateTime)
+
+    user = relationship("User")

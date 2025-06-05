@@ -7,6 +7,7 @@ from fastapi import (
 )
 from inventory_core import get_recent_logs
 from database import SessionLocal, get_db
+from sqlalchemy.orm import Session
 from auth import require_role
 import csv
 from io import StringIO
@@ -31,23 +32,22 @@ def _generate_csv(limit: int, tenant_id: int, task_id: str) -> None:
         writer = csv.writer(output)
         writer.writerow(["id", "user_id", "item_id", "action", "quantity", "timestamp"])
         for log in logs:
-            writer.writerow([
-                log.id,
-                log.user_id,
-                log.item_id,
-                log.action,
-                log.quantity,
-                log.timestamp.isoformat(),
-            ])
+            writer.writerow(
+                [
+                    log.id,
+                    log.user_id,
+                    log.item_id,
+                    log.action,
+                    log.quantity,
+                    log.timestamp.isoformat(),
+                ]
+            )
         export_tasks[task_id] = output.getvalue()
     finally:
         db.close()
 
 
-@router.post(
-    "/audit/export",
-    summary="Start async audit log CSV export"
-)
+@router.post("/audit/export", summary="Start async audit log CSV export")
 def start_audit_export(
     background_tasks: BackgroundTasks,
     tenant_id: int,
@@ -62,6 +62,32 @@ def start_audit_export(
     export_tasks[task_id] = None
     background_tasks.add_task(_generate_csv, limit, tenant_id, task_id)
     return {"task_id": task_id}
+
+
+@router.get("/audit/export", response_class=Response, summary="Export audit log CSV")
+def export_csv(
+    tenant_id: int,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    """Return a CSV of recent audit logs synchronously."""
+    logs = get_recent_logs(db, limit, tenant_id)
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["id", "user_id", "item_id", "action", "quantity", "timestamp"])
+    for log in logs:
+        writer.writerow(
+            [
+                log.id,
+                log.user_id,
+                log.item_id,
+                log.action,
+                log.quantity,
+                log.timestamp.isoformat(),
+            ]
+        )
+    return Response(content=output.getvalue(), media_type="text/csv")
 
 
 @router.get(
@@ -88,7 +114,7 @@ def get_exported_csv(
 
 @router.get(
     "/usage/{item_name}",
-    summary="Aggregate issued/returned quantities for a single item"
+    summary="Aggregate issued/returned quantities for a single item",
 )
 def item_usage(
     item_name: str,
@@ -125,10 +151,7 @@ def item_usage(
     ]
 
 
-@router.get(
-    "/usage",
-    summary="Aggregate issued/returned usage across all items"
-)
+@router.get("/usage", summary="Aggregate issued/returned usage across all items")
 def overall_usage(
     days: int = 30,
     db: Session = Depends(get_db),

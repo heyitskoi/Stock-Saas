@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
 from typing import Optional
 import os
+import secrets
+
+import pyotp
 from dotenv import load_dotenv
 
 from fastapi import Depends, HTTPException, status
@@ -10,7 +13,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User
+from models import User, PasswordResetToken
 
 load_dotenv()
 
@@ -78,13 +81,45 @@ def require_role(required_roles):
 
 
 async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+    otp: str | None = None,
 ):
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
+    if user.two_factor_enabled:
+        totp = pyotp.TOTP(user.two_factor_secret)
+        if not otp or not totp.verify(otp):
+            raise HTTPException(status_code=400, detail="Invalid two-factor code")
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+def create_password_reset(db: Session, user: User) -> str:
+    token = secrets.token_urlsafe(32)
+    expires = datetime.utcnow() + timedelta(hours=1)
+    entry = PasswordResetToken(user_id=user.id, token=token, expires_at=expires)
+    db.add(entry)
+    db.commit()
+    return token
+
+
+def verify_password_reset(db: Session, token: str) -> User | None:
+    entry = (
+        db.query(PasswordResetToken)
+        .filter(
+            PasswordResetToken.token == token,
+            PasswordResetToken.expires_at > datetime.utcnow(),
+        )
+        .first()
+    )
+    if entry:
+        user = db.query(User).get(entry.user_id)
+        db.delete(entry)
+        db.commit()
+        return user
+    return None

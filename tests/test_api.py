@@ -14,6 +14,7 @@ from main import app
 
 import pytest
 from tests.factories import UserFactory, ItemFactory, AuditLogFactory
+import pyotp
 
 
 @pytest.fixture
@@ -145,10 +146,14 @@ def test_audit_log_endpoint(client):
         headers=headers,
     )
     client.post(
-        "/items/issue", json={"name": "keyboard", "quantity": 1, "tenant_id": 1}, headers=headers
+        "/items/issue",
+        json={"name": "keyboard", "quantity": 1, "tenant_id": 1},
+        headers=headers,
     )
 
-    resp = client.get("/audit/logs", params={"limit": 2, "tenant_id": 1}, headers=headers)
+    resp = client.get(
+        "/audit/logs", params={"limit": 2, "tenant_id": 1}, headers=headers
+    )
     assert resp.status_code == 200
     logs = resp.json()
     assert len(logs) == 2
@@ -207,7 +212,12 @@ def test_create_and_list_users(client):
 
     create_resp = client.post(
         "/users/",
-        json={"username": "newuser", "password": "secret", "role": "manager", "tenant_id": 1},
+        json={
+            "username": "newuser",
+            "password": "secret",
+            "role": "manager",
+            "tenant_id": 1,
+        },
         headers=headers,
     )
     assert create_resp.status_code == 200
@@ -327,4 +337,52 @@ def test_usage_endpoints(client):
     usage_resp = client.get(
         "/analytics/usage/stats", params={"days": 30}, headers=headers
     )
-    assert usage_resp.status_code in (200, 404)  # Adjust as needed depending on implementation
+    assert usage_resp.status_code in (
+        200,
+        404,
+    )  # Adjust as needed depending on implementation
+
+
+def test_password_reset_flow(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = client.post(
+        "/users/",
+        json={"username": "reset", "password": "old", "role": "user", "tenant_id": 1},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+
+    req = client.post("/auth/request-reset", json={"username": "reset"})
+    assert req.status_code == 200
+    reset_token = req.json()["token"]
+
+    confirm = client.post(
+        "/auth/reset-password",
+        json={"token": reset_token, "new_password": "new"},
+    )
+    assert confirm.status_code == 200
+
+    login = client.post("/token", data={"username": "reset", "password": "new"})
+    assert login.status_code == 200
+
+
+def test_two_factor_login(client):
+    secret = pyotp.random_base32()
+    UserFactory(
+        username="tfuser",
+        password="pwd",
+        role="user",
+        tenant_id=1,
+        two_factor_secret=secret,
+        two_factor_enabled=True,
+    )
+
+    fail = client.post("/token", data={"username": "tfuser", "password": "pwd"})
+    assert fail.status_code == 400
+
+    code = pyotp.TOTP(secret).now()
+    ok = client.post(
+        "/token", data={"username": "tfuser", "password": "pwd", "otp": code}
+    )
+    assert ok.status_code == 200
