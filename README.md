@@ -47,3 +47,15 @@ uvicorn main:app --reload
 
 API endpoints mirror the CLI commands and are documented at `/docs` when the server is running.
 Authenticate by posting your username and password to `/token` and include the returned token using `Authorization: Bearer <token>`.
+
+## Running tests
+
+After installing the project dependencies you can run the unit and API tests with `pytest`:
+
+```bash
+pip install -r requirements.txt
+pip install pytest
+pytest
+```
+
+The tests use an in-memory SQLite database so they will not modify any local data files.
