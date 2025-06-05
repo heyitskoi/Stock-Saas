@@ -156,7 +156,12 @@ def test_export_audit_csv(client):
         headers=headers,
     )
 
-    resp = client.get('/analytics/audit/export', params={'limit': 1}, headers=headers)
+    start_resp = client.post('/analytics/audit/export', params={'limit': 1}, headers=headers)
+    assert start_resp.status_code == 200
+    task_id = start_resp.json()['task_id']
+    resp = client.get(f'/analytics/audit/export/{task_id}', headers=headers)
+    if resp.status_code == 202:
+        resp = client.get(f'/analytics/audit/export/{task_id}', headers=headers)
     assert resp.status_code == 200
     assert resp.headers['content-type'].startswith('text/csv')
     lines = resp.text.strip().splitlines()
@@ -283,5 +288,35 @@ def test_update_and_delete_endpoints(client):
         headers=headers,
     )
     assert status_resp.status_code == 404
+
+
+def test_usage_endpoints(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    client.post(
+        "/items/add",
+        json={"name": "stats", "quantity": 5, "threshold": 0},
+        headers=headers,
+    )
+    client.post(
+        "/items/issue",
+        json={"name": "stats", "quantity": 3},
+        headers=headers,
+    )
+    client.post(
+        "/items/return",
+        json={"name": "stats", "quantity": 1},
+        headers=headers,
+    )
+
+    resp = client.get("/analytics/usage/stats", headers=headers)
+    assert resp.status_code == 200
+    usage = resp.json()
+    assert isinstance(usage, list)
+    assert usage[-1]["issued"] >= 3
+    overall = client.get("/analytics/usage", headers=headers)
+    assert overall.status_code == 200
+
 
 
