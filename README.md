@@ -64,6 +64,9 @@ pip install pytest
 pytest
 ```
 
+The `requirements.txt` file pins `httpx` to `<0.25` to remain compatible with
+`starlette==0.27.0`.
+
 The tests use an in-memory SQLite database so they will not modify any local data files.
 ### Example requests
 
@@ -116,6 +119,11 @@ npm run dev
 ```
 
 By default it expects the FastAPI backend to run on `http://localhost:8000`. You can change this by setting `NEXT_PUBLIC_API_URL` when starting the Next.js server.
+
+The backend now enables CORS using FastAPI's `CORSMiddleware`. When the
+application runs with the default SQLite database (development mode), all
+origins are allowed. In other environments requests are only accepted from the
+origin specified in `NEXT_PUBLIC_API_URL`.
 
 After logging in you will see the dashboard listing all items. Links are provided to pages for adding new stock, issuing items and recording returns. Each form uses the JWT token stored in `localStorage` to authenticate API requests.
 
