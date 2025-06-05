@@ -65,7 +65,7 @@ pip install pytest
 pytest
 ```
 
-The `requirements.txt` file pins `httpx` to `<0.25` to remain compatible with
+The `requirements.txt` file pins `httpx` to `0.27.*` to remain compatible with
 `starlette==0.27.0`.
 
 The tests use an in-memory SQLite database so they will not modify any local data files.
