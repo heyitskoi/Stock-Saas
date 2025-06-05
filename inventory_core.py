@@ -5,9 +5,14 @@ from datetime import datetime
 
 
 def _log_action(db: Session, user_id: Optional[int], item: Item, action: str, quantity: int):
-    log = AuditLog(user_id=user_id, item_id=item.id, action=action, quantity=quantity, timestamp=datetime.utcnow())
+    log = AuditLog(
+        user_id=user_id,
+        item_id=item.id,
+        action=action,
+        quantity=quantity,
+        timestamp=datetime.utcnow(),
+    )
     db.add(log)
-    db.commit()
 
 
 def add_item(db: Session, name: str, qty: int, threshold: int, user_id: Optional[int] = None) -> Item:
@@ -18,9 +23,10 @@ def add_item(db: Session, name: str, qty: int, threshold: int, user_id: Optional
     item.available += qty
     if threshold is not None:
         item.threshold = threshold
+    db.flush()
+    _log_action(db, user_id, item, "add", qty)
     db.commit()
     db.refresh(item)
-    _log_action(db, user_id, item, "add", qty)
     return item
 
 
@@ -30,9 +36,9 @@ def issue_item(db: Session, name: str, qty: int, user_id: Optional[int] = None) 
         raise ValueError("Not enough stock to issue")
     item.available -= qty
     item.in_use += qty
+    _log_action(db, user_id, item, "issue", qty)
     db.commit()
     db.refresh(item)
-    _log_action(db, user_id, item, "issue", qty)
     return item
 
 
@@ -42,9 +48,9 @@ def return_item(db: Session, name: str, qty: int, user_id: Optional[int] = None)
         raise ValueError("Invalid return quantity")
     item.in_use -= qty
     item.available += qty
+    _log_action(db, user_id, item, "return", qty)
     db.commit()
     db.refresh(item)
-    _log_action(db, user_id, item, "return", qty)
     return item
 
 
