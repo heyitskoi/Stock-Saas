@@ -7,6 +7,7 @@ from fastapi import (
 )
 from inventory_core import get_recent_logs
 from database import SessionLocal, get_db
+from sqlalchemy.orm import Session
 from auth import require_role
 import csv
 from io import StringIO
@@ -18,36 +19,49 @@ router = APIRouter(prefix="/analytics")
 
 admin_or_manager = require_role(["admin", "manager"])
 
-# In-memory store for export task results: {task_id: csv_data or None if still generating}
+# In-memory export task results {task_id: csv_data or None while pending}
 export_tasks: dict[str, str | None] = {}
 
 
-def _generate_csv(limit: int, tenant_id: int, task_id: str) -> None:
-    """Background task: build CSV data for audit logs filtered by tenant."""
-    db = SessionLocal()
-    try:
-        logs = get_recent_logs(db, limit, tenant_id)
-        output = StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["id", "user_id", "item_id", "action", "quantity", "timestamp"])
-        for log in logs:
-            writer.writerow([
+def _build_csv(db: Session, limit: int, tenant_id: int) -> str:
+    """Generate CSV data for recent audit logs."""
+    logs = get_recent_logs(db, limit, tenant_id)
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            "id",
+            "user_id",
+            "item_id",
+            "action",
+            "quantity",
+            "timestamp",
+        ]
+    )
+    for log in logs:
+        writer.writerow(
+            [
                 log.id,
                 log.user_id,
                 log.item_id,
                 log.action,
                 log.quantity,
                 log.timestamp.isoformat(),
-            ])
-        export_tasks[task_id] = output.getvalue()
+            ]
+        )
+    return output.getvalue()
+
+
+def _generate_csv(limit: int, tenant_id: int, task_id: str) -> None:
+    """Background task: build CSV data for audit logs filtered by tenant."""
+    db = SessionLocal()
+    try:
+        export_tasks[task_id] = _build_csv(db, limit, tenant_id)
     finally:
         db.close()
 
 
-@router.post(
-    "/audit/export",
-    summary="Start async audit log CSV export"
-)
+@router.post("/audit/export", summary="Start async audit log CSV export")
 def start_audit_export(
     background_tasks: BackgroundTasks,
     tenant_id: int,
@@ -62,6 +76,22 @@ def start_audit_export(
     export_tasks[task_id] = None
     background_tasks.add_task(_generate_csv, limit, tenant_id, task_id)
     return {"task_id": task_id}
+
+
+@router.get(
+    "/audit/export",
+    response_class=Response,
+    summary="Download audit log CSV synchronously",
+)
+def export_audit_csv(
+    tenant_id: int,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    """Generate and return a CSV of recent audit logs."""
+    csv_data = _build_csv(db, limit, tenant_id)
+    return Response(content=csv_data, media_type="text/csv")
 
 
 @router.get(
@@ -88,7 +118,7 @@ def get_exported_csv(
 
 @router.get(
     "/usage/{item_name}",
-    summary="Aggregate issued/returned quantities for a single item"
+    summary="Aggregate issued/returned quantities for a single item",
 )
 def item_usage(
     item_name: str,
@@ -125,10 +155,7 @@ def item_usage(
     ]
 
 
-@router.get(
-    "/usage",
-    summary="Aggregate issued/returned usage across all items"
-)
+@router.get("/usage", summary="Aggregate issued/returned usage across all items")
 def overall_usage(
     days: int = 30,
     db: Session = Depends(get_db),
