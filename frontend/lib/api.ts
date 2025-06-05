@@ -150,3 +150,22 @@ export async function listUsers(token: string) {
   }
   return res.json();
 }
+
+export async function getItemUsage(
+  token: string,
+  name: string,
+  days = 30
+) {
+  const res = await fetch(
+    `${API_URL}/analytics/usage/${name}?days=${days}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) {
+    throw new Error('Failed to load usage');
+  }
+  return res.json();
+}
