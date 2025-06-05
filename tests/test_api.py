@@ -319,12 +319,27 @@ def test_usage_endpoints(client):
         json={"name": "stats", "quantity": 5, "threshold": 0, "tenant_id": 1},
         headers=headers,
     )
-
-    # You could now add:
-    # - Issue items
-    # - Return items
-    # - Call /analytics/usage/{item_name} and /analytics/usage
-    usage_resp = client.get(
-        "/analytics/usage/stats", params={"days": 30}, headers=headers
+    client.post(
+        "/items/issue",
+        json={"name": "stats", "quantity": 2, "threshold": 0, "tenant_id": 1},
+        headers=headers,
     )
-    assert usage_resp.status_code in (200, 404)  # Adjust as needed depending on implementation
+    client.post(
+        "/items/return",
+        json={"name": "stats", "quantity": 1, "threshold": 0, "tenant_id": 1},
+        headers=headers,
+    )
+
+    usage_resp = client.get(
+        "/analytics/usage/stats",
+        params={"tenant_id": 1, "days": 7},
+        headers=headers,
+    )
+    assert usage_resp.status_code == 200
+
+    overall_resp = client.get(
+        "/analytics/usage",
+        params={"tenant_id": 1, "days": 7},
+        headers=headers,
+    )
+    assert overall_resp.status_code == 200

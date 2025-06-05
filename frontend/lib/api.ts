@@ -211,3 +211,23 @@ export async function getItemUsage(
   }
   return res.json();
 }
+
+export async function getOverallUsage(
+  token: string,
+  opts: { start?: string; end?: string; tenant_id?: number; days?: number } = {}
+) {
+  const params = new URLSearchParams();
+  if (opts.days !== undefined) params.append('days', String(opts.days));
+  if (opts.start) params.append('start_date', opts.start);
+  if (opts.end) params.append('end_date', opts.end);
+  if (opts.tenant_id !== undefined)
+    params.append('tenant_id', String(opts.tenant_id));
+
+  const res = await fetch(`${API_URL}/analytics/usage?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error('Failed to load usage');
+  }
+  return res.json();
+}

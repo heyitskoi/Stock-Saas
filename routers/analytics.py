@@ -7,6 +7,7 @@ from fastapi import (
 )
 from inventory_core import get_recent_logs
 from database import SessionLocal, get_db
+from sqlalchemy.orm import Session
 from auth import require_role
 import csv
 from io import StringIO
@@ -21,6 +22,37 @@ admin_or_manager = require_role(["admin", "manager"])
 # In-memory store for export task results: {task_id: csv_data or None if still generating}
 export_tasks: dict[str, str | None] = {}
 
+
+@router.get(
+    "/audit/export",
+    response_class=Response,
+    summary="Download audit log CSV synchronously",
+)
+def export_audit_csv(
+    tenant_id: int,
+    limit: int = 100,
+    user: User = Depends(admin_or_manager),
+):
+    """Return a CSV of recent audit logs for a tenant."""
+    db = SessionLocal()
+    try:
+        logs = get_recent_logs(db, limit, tenant_id)
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["id", "user_id", "item_id", "action", "quantity", "timestamp"])
+        for log in logs:
+            writer.writerow([
+                log.id,
+                log.user_id,
+                log.item_id,
+                log.action,
+                log.quantity,
+                log.timestamp.isoformat(),
+            ])
+        csv_data = output.getvalue()
+    finally:
+        db.close()
+    return Response(content=csv_data, media_type="text/csv")
 
 def _generate_csv(limit: int, tenant_id: int, task_id: str) -> None:
     """Background task: build CSV data for audit logs filtered by tenant."""
@@ -88,23 +120,36 @@ def get_exported_csv(
 
 @router.get(
     "/usage/{item_name}",
-    summary="Aggregate issued/returned quantities for a single item"
+    summary="Aggregate issued/returned quantities for a single item",
 )
 def item_usage(
     item_name: str,
     days: int = 30,
+    tenant_id: int | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
-    """
-    Return usage statistics (issued vs. returned) for a single item, grouped by day,
-    over the past `days` days.
-    """
-    since = datetime.utcnow() - timedelta(days=days)
-    logs = (
+    """Return usage stats for a single item."""
+    if start_date and end_date:
+        since = start_date
+        until = end_date
+    else:
+        since = datetime.utcnow() - timedelta(days=days)
+        until = datetime.utcnow()
+
+    query = (
         db.query(AuditLog)
         .join(Item, AuditLog.item_id == Item.id)
-        .filter(Item.name == item_name, AuditLog.timestamp >= since)
+        .filter(Item.name == item_name)
+    )
+    if tenant_id is not None:
+        query = query.filter(Item.tenant_id == tenant_id)
+
+    logs = (
+        query
+        .filter(AuditLog.timestamp >= since, AuditLog.timestamp <= until)
         .filter(AuditLog.action.in_(["issue", "return"]))
         .order_by(AuditLog.timestamp)
         .all()
@@ -131,17 +176,27 @@ def item_usage(
 )
 def overall_usage(
     days: int = 30,
+    tenant_id: int | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
-    """
-    Return overall issued vs. returned counts, grouped by day,
-    across all items over the past `days` days.
-    """
-    since = datetime.utcnow() - timedelta(days=days)
+    """Return overall issued vs. returned counts grouped by day."""
+    if start_date and end_date:
+        since = start_date
+        until = end_date
+    else:
+        since = datetime.utcnow() - timedelta(days=days)
+        until = datetime.utcnow()
+
+    query = db.query(AuditLog)
+    if tenant_id is not None:
+        query = query.join(Item).filter(Item.tenant_id == tenant_id)
+
     logs = (
-        db.query(AuditLog)
-        .filter(AuditLog.timestamp >= since)
+        query
+        .filter(AuditLog.timestamp >= since, AuditLog.timestamp <= until)
         .filter(AuditLog.action.in_(["issue", "return"]))
         .order_by(AuditLog.timestamp)
         .all()
