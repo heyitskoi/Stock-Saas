@@ -27,7 +27,15 @@ from schemas import (
 from routers.users import router as users_router
 from routers.analytics import router as analytics_router
 
-app = FastAPI(title="Stock SaaS API")
+app = FastAPI(
+    title="Stock SaaS API",
+    description=(
+        "Multi-tenant inventory management API. Include `tenant_id` in all"
+        " requests to scope data. Long running operations such as CSV exports"
+        " run as background tasks. Environment variables configure the database,"
+        " initial admin credentials and notification settings."
+    ),
+)
 
 # configure CORS so the frontend can access the API
 frontend_origin = os.getenv("NEXT_PUBLIC_API_URL")
@@ -89,6 +97,7 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
+    """Authenticate a user and return a JWT access token."""
     return await login_for_access_token(form_data, db)
 
 
@@ -98,6 +107,7 @@ def api_add_item(
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
+    """Add stock for a tenant. `tenant_id` must be supplied in the payload."""
     item = add_item(
         db,
         payload.name,
@@ -156,6 +166,7 @@ def api_get_status(
     db: Session = Depends(get_db),
     user: User = Depends(any_user),
 ):
+    """Retrieve inventory status for one tenant. Use `name` to filter an item."""
     data = get_status(db, tenant_id=tenant_id, name=name)
     if not data:
         raise HTTPException(
@@ -176,6 +187,7 @@ def api_get_audit_logs(
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
+    """Return the most recent audit log entries for a tenant."""
     return get_recent_logs(db, limit, tenant_id)
 
 
@@ -185,6 +197,7 @@ def api_update_item(
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
+    """Update an item's name or threshold within a tenant."""
     try:
         item = update_item(
             db,
@@ -205,6 +218,7 @@ def api_delete_item(
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
+    """Remove an item from a tenant's inventory."""
     try:
         delete_item(
             db,
