@@ -1,8 +1,10 @@
+import os
+
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from database import Base, engine, get_db, SessionLocal
+from database import Base, engine, get_db, SessionLocal, DATABASE_URL
 from inventory_core import add_item, issue_item, return_item, get_status
 from auth import login_for_access_token, require_role, get_password_hash
 from models import User
@@ -14,11 +16,20 @@ Base.metadata.create_all(bind=engine)
 
 @app.on_event("startup")
 def create_default_admin():
+    username = os.getenv("ADMIN_USERNAME")
+    password = os.getenv("ADMIN_PASSWORD")
+    if not (username and password) and DATABASE_URL.startswith("sqlite"):
+        username = username or "admin"
+        password = password or "admin"
+
+    if not (username and password):
+        return
+
     db = SessionLocal()
-    if not db.query(User).filter(User.username == "admin").first():
+    if not db.query(User).filter(User.username == username).first():
         admin = User(
-            username="admin",
-            hashed_password=get_password_hash("admin"),
+            username=username,
+            hashed_password=get_password_hash(password),
             role="admin",
         )
         db.add(admin)
@@ -47,11 +58,14 @@ def api_add_item(
     user: User = Depends(admin_or_manager),
 ):
     item = add_item(db, name, quantity, threshold, user_id=user.id)
-    return {"message": f"Added {quantity} {name}(s)", "item": {
-        "available": item.available,
-        "in_use": item.in_use,
-        "threshold": item.threshold,
-    }}
+    return {
+        "message": f"Added {quantity} {name}(s)",
+        "item": {
+            "available": item.available,
+            "in_use": item.in_use,
+            "threshold": item.threshold,
+        },
+    }
 
 
 @app.post("/items/issue")
