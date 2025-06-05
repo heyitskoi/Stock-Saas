@@ -50,7 +50,6 @@ async def login(
     return await login_for_access_token(form_data, db)
 
 
-
 @app.post("/items/add", summary="Add items to inventory", response_model=ItemResponse)
 def api_add_item(
     payload: ItemCreate,

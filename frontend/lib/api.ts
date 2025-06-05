@@ -28,3 +28,48 @@ export async function getItems(token: string) {
   }
   return res.json();
 }
+
+export async function addItem(token: string, item: { name: string; quantity: number; threshold: number }) {
+  const res = await fetch(`${API_URL}/items/add`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to add item');
+  }
+  return res.json();
+}
+
+export async function issueItem(token: string, item: { name: string; quantity: number; threshold: number }) {
+  const res = await fetch(`${API_URL}/items/issue`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to issue item');
+  }
+  return res.json();
+}
+
+export async function returnItem(token: string, item: { name: string; quantity: number; threshold: number }) {
+  const res = await fetch(`${API_URL}/items/return`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to return item');
+  }
+  return res.json();
+}
