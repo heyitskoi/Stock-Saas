@@ -76,10 +76,7 @@ def start_audit_export(
     limit: int = 100,
     user: User = Depends(admin_or_manager),
 ):
-    """
-    Begin generating a CSV of the most recent audit logs for a given tenant.
-    Returns a task_id that can be used to retrieve the CSV once it's ready.
-    """
+    """Begin generating a CSV of the most recent audit logs for a tenant."""
     task_id = str(uuid.uuid4())
     export_tasks[task_id] = None
     background_tasks.add_task(_generate_csv, limit, tenant_id, task_id)
@@ -95,10 +92,7 @@ def get_exported_csv(
     task_id: str,
     user: User = Depends(admin_or_manager),
 ):
-    """
-    Retrieve the generated CSV for a previously started export task.
-    If the CSV is still being generated, returns HTTP 202.
-    """
+    """Retrieve the generated CSV for a previously started export task."""
     if task_id not in export_tasks:
         raise HTTPException(status_code=404, detail="Export not found")
     csv_data = export_tasks[task_id]
@@ -114,18 +108,31 @@ def get_exported_csv(
 def item_usage(
     item_name: str,
     days: int = 30,
+    tenant_id: int | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
-    """
-    Return usage statistics (issued vs. returned) for a single item, grouped by day,
-    over the past `days` days.
-    """
-    since = datetime.utcnow() - timedelta(days=days)
-    logs = (
+    """Return usage stats for a single item."""
+    if start_date and end_date:
+        since = start_date
+        until = end_date
+    else:
+        since = datetime.utcnow() - timedelta(days=days)
+        until = datetime.utcnow()
+
+    query = (
         db.query(AuditLog)
         .join(Item, AuditLog.item_id == Item.id)
-        .filter(Item.name == item_name, AuditLog.timestamp >= since)
+        .filter(Item.name == item_name)
+    )
+    if tenant_id is not None:
+        query = query.filter(Item.tenant_id == tenant_id)
+
+    logs = (
+        query
+        .filter(AuditLog.timestamp >= since, AuditLog.timestamp <= until)
         .filter(AuditLog.action.in_(["issue", "return"]))
         .order_by(AuditLog.timestamp)
         .all()
@@ -152,17 +159,27 @@ def item_usage(
 )
 def overall_usage(
     days: int = 30,
+    tenant_id: int | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
-    """
-    Return overall issued vs. returned counts, grouped by day,
-    across all items over the past `days` days.
-    """
-    since = datetime.utcnow() - timedelta(days=days)
+    """Return overall issued vs. returned counts grouped by day."""
+    if start_date and end_date:
+        since = start_date
+        until = end_date
+    else:
+        since = datetime.utcnow() - timedelta(days=days)
+        until = datetime.utcnow()
+
+    query = db.query(AuditLog)
+    if tenant_id is not None:
+        query = query.join(Item).filter(Item.tenant_id == tenant_id)
+
     logs = (
-        db.query(AuditLog)
-        .filter(AuditLog.timestamp >= since)
+        query
+        .filter(AuditLog.timestamp >= since, AuditLog.timestamp <= until)
         .filter(AuditLog.action.in_(["issue", "return"]))
         .order_by(AuditLog.timestamp)
         .all()

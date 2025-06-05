@@ -359,7 +359,9 @@ def test_usage_endpoints(client):
     )
 
     usage_resp = client.get(
-        f"/analytics/usage/{item_name}", params={"days": 30}, headers=headers
+        f"/analytics/usage/{item_name}",
+        params={"tenant_id": 1, "days": 30},
+        headers=headers,
     )
     assert usage_resp.status_code == 200
     usage_data = usage_resp.json()
@@ -368,7 +370,11 @@ def test_usage_endpoints(client):
     assert total_issued == 3
     assert total_returned == 1
 
-    overall_resp = client.get("/analytics/usage", params={"days": 30}, headers=headers)
+    overall_resp = client.get(
+        "/analytics/usage",
+        params={"tenant_id": 1, "days": 30},
+        headers=headers,
+    )
     assert overall_resp.status_code == 200
     overall = overall_resp.json()
     assert sum(e["issued"] for e in overall) >= 3
