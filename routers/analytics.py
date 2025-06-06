@@ -13,6 +13,7 @@ import csv
 from io import StringIO
 from models import User, AuditLog, Item
 from datetime import datetime, timedelta
+from pydantic import BaseModel, validator, conint
 import uuid
 
 router = APIRouter(prefix="/analytics")
@@ -22,6 +23,19 @@ admin_or_manager = require_role(["admin", "manager"])
 # In-memory store for export task results
 # {task_id: csv_data or None while still generating}
 export_tasks: dict[str, str | None] = {}
+
+
+class UsageParams(BaseModel):
+    days: conint(gt=0) = 30
+    tenant_id: int | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+
+    @validator("days")
+    def days_positive(cls, v):
+        if v <= 0:
+            raise ValueError("days must be positive")
+        return v
 
 
 def _build_csv(db: Session, limit: int, tenant_id: int) -> str:
@@ -110,19 +124,20 @@ def get_exported_csv(
 )
 def item_usage(
     item_name: str,
-    days: int = 30,
-    tenant_id: int | None = None,
-    start_date: datetime | None = None,
-    end_date: datetime | None = None,
+    params: UsageParams = Depends(),
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
     """Return usage stats for a single item."""
-    if start_date and end_date:
-        since = start_date
-        until = end_date
+    if params.start_date and params.end_date:
+        if params.start_date > params.end_date:
+            raise HTTPException(
+                status_code=400, detail="start_date must be before end_date"
+            )
+        since = params.start_date
+        until = params.end_date
     else:
-        since = datetime.utcnow() - timedelta(days=days)
+        since = datetime.utcnow() - timedelta(days=params.days)
         until = datetime.utcnow()
 
     query = (
@@ -130,8 +145,8 @@ def item_usage(
         .join(Item, AuditLog.item_id == Item.id)
         .filter(Item.name == item_name)
     )
-    if tenant_id is not None:
-        query = query.filter(Item.tenant_id == tenant_id)
+    if params.tenant_id is not None:
+        query = query.filter(Item.tenant_id == params.tenant_id)
 
     logs = (
         query.filter(AuditLog.timestamp >= since, AuditLog.timestamp <= until)
@@ -157,24 +172,25 @@ def item_usage(
 
 @router.get("/usage", summary="Aggregate issued/returned usage across all items")
 def overall_usage(
-    days: int = 30,
-    tenant_id: int | None = None,
-    start_date: datetime | None = None,
-    end_date: datetime | None = None,
+    params: UsageParams = Depends(),
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
     """Return overall issued vs. returned counts grouped by day."""
-    if start_date and end_date:
-        since = start_date
-        until = end_date
+    if params.start_date and params.end_date:
+        if params.start_date > params.end_date:
+            raise HTTPException(
+                status_code=400, detail="start_date must be before end_date"
+            )
+        since = params.start_date
+        until = params.end_date
     else:
-        since = datetime.utcnow() - timedelta(days=days)
+        since = datetime.utcnow() - timedelta(days=params.days)
         until = datetime.utcnow()
 
     query = db.query(AuditLog)
-    if tenant_id is not None:
-        query = query.join(Item).filter(Item.tenant_id == tenant_id)
+    if params.tenant_id is not None:
+        query = query.join(Item).filter(Item.tenant_id == params.tenant_id)
 
     logs = (
         query.filter(AuditLog.timestamp >= since, AuditLog.timestamp <= until)
