@@ -18,26 +18,25 @@ Inventory data is scoped by **tenant**. Every item and user belongs to a tenant
 record, identified by `tenant_id`. API requests must include this identifier so
 the backend knows which tenant's inventory to operate on.
 
+Recent updates include support for departments and categories, transferring
+items between them, a registration endpoint with user management UI and
+WebSocket notifications when stock levels drop.
+
 You can use the CLI or the API to manage inventory. When available stock falls
 below a configured threshold, a warning is displayed during the status check.
 
 ## Quickstart
 
 
-1. Copy `.env.example` to `.env` and adjust values. Set `SECRET_KEY` or
-   provide a `SECRET_STORE_FILE` path for the secrets manager. `DATABASE_URL`
-   defaults to SQLite but can be overridden.
-=======
 1. Copy `.env.example` to `.env` and adjust values. At a minimum set
    `SECRET_KEY`. `DATABASE_URL` defaults to SQLite but can be overridden.
    When running with `docker-compose` the backend container reads
-   `SECRET_KEY` from this file.
-
-   Optional settings include `ADMIN_USERNAME`, `ADMIN_PASSWORD`,
-   `NEXT_PUBLIC_API_URL` for the frontend and background worker variables
-   such as `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`, `SLACK_WEBHOOK_URL`,
-   `SMTP_SERVER`, `ALERT_EMAIL_TO` and `ALERT_EMAIL_FROM`.
-   **Do not commit your `.env` file to version control as it may contain secrets.**
+   `SECRET_KEY` from this file. Optional settings include `ADMIN_USERNAME`,
+   `ADMIN_PASSWORD`, `NEXT_PUBLIC_API_URL` for the frontend and background
+   worker variables such as `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`,
+   `SLACK_WEBHOOK_URL`, `SMTP_SERVER`, `ALERT_EMAIL_TO` and
+   `ALERT_EMAIL_FROM`. **Do not commit your `.env` file to version control as
+   it may contain secrets.**
 2. Install Python dependencies and start the API:
 
 ```bash
