@@ -1,6 +1,6 @@
 from functools import lru_cache
 import json
-from typing import Any, List
+from typing import List
 
 import redis
 

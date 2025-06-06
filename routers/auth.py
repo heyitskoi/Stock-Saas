@@ -12,7 +12,6 @@ from schemas import (
     PasswordResetConfirm,
     RegisterRequest,
     RegisterResponse,
-    UserResponse,
 )
 
 router = APIRouter(prefix="/auth")

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from models import Item, AuditLog
 from datetime import datetime
+from sqlalchemy import select, and_
 
 
 def _log_action(
@@ -16,6 +17,7 @@ def _log_action(
         timestamp=datetime.utcnow(),
     )
     db.add(log)
+
 
 def add_item(
     db: Session,
@@ -202,7 +204,7 @@ def update_item(
         item.threshold = threshold
     if min_par is not None:
         if min_par < 0:
-            raise ValueError("min_par cannot be negative")
+            raise ValueError("Min par cannot be negative")
         item.min_par = min_par
     if department_id is not None:
         item.department_id = department_id
@@ -213,7 +215,6 @@ def update_item(
     if status is not None:
         item.status = status
 
-    _log_action(db, user_id, item, "update", 0)
     db.commit()
     db.refresh(item)
     return item
@@ -225,7 +226,7 @@ def delete_item(
     tenant_id: int,
     user_id: Optional[int] = None,
 ) -> None:
-    """Remove an item from the inventory."""
+    """Delete an item."""
     item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item:
         raise ValueError("Item not found")
@@ -243,7 +244,7 @@ def transfer_item(
     to_tenant_id: int,
     user_id: Optional[int] = None,
 ) -> Tuple[Item, Item]:
-    """Move stock between tenants and log the transfer."""
+    """Transfer items between tenants."""
     if qty <= 0:
         raise ValueError("Quantity must be positive")
 
@@ -265,6 +266,11 @@ def transfer_item(
             available=0,
             in_use=0,
             threshold=from_item.threshold,
+            min_par=from_item.min_par,
+            department_id=from_item.department_id,
+            category_id=from_item.category_id,
+            stock_code=from_item.stock_code,
+            status=from_item.status,
         )
         db.add(to_item)
 
@@ -272,12 +278,23 @@ def transfer_item(
     to_item.available += qty
 
     _log_action(db, user_id, from_item, "transfer", qty)
-    _log_action(db, user_id, to_item, "transfer", qty)
-
     db.commit()
     db.refresh(from_item)
     db.refresh(to_item)
     return from_item, to_item
+
+
+async def _async_log_action(
+    db: AsyncSession, user_id: Optional[int], item: Item, action: str, quantity: int
+):
+    log = AuditLog(
+        user_id=user_id,
+        item_id=item.id,
+        action=action,
+        quantity=quantity,
+        timestamp=datetime.utcnow(),
+    )
+    db.add(log)
 
 
 async def async_add_item(
@@ -293,22 +310,51 @@ async def async_add_item(
     status: Optional[str] = None,
     user_id: Optional[int] = None,
 ) -> Item:
-    """Async wrapper around :func:`add_item`."""
-    return await db.run_sync(
-        lambda sync_db: add_item(
-            sync_db,
-            name,
-            qty,
-            threshold,
-            tenant_id,
-            min_par,
-            department_id,
-            category_id,
-            stock_code,
-            status,
-            user_id,
-        )
+    """Add items to inventory."""
+    if qty <= 0:
+        raise ValueError("Quantity must be positive")
+    if threshold < 0:
+        raise ValueError("Threshold cannot be negative")
+
+    result = await db.execute(
+        select(Item).where(and_(Item.name == name, Item.tenant_id == tenant_id))
     )
+    item = result.scalars().first()
+
+    if not item:
+        item = Item(
+            name=name,
+            tenant_id=tenant_id,
+            available=0,
+            in_use=0,
+            threshold=threshold,
+            min_par=min_par,
+            department_id=department_id,
+            category_id=category_id,
+            stock_code=stock_code,
+            status=status,
+        )
+        db.add(item)
+
+    item.available += qty
+    if threshold is not None:
+        item.threshold = threshold
+    if min_par is not None:
+        item.min_par = min_par
+    if department_id is not None:
+        item.department_id = department_id
+    if category_id is not None:
+        item.category_id = category_id
+    if stock_code is not None:
+        item.stock_code = stock_code
+    if status is not None:
+        item.status = status
+
+    await db.flush()
+    await _async_log_action(db, user_id, item, "add", qty)
+    await db.commit()
+    await db.refresh(item)
+    return item
 
 
 async def async_issue_item(
@@ -318,10 +364,25 @@ async def async_issue_item(
     tenant_id: int,
     user_id: Optional[int] = None,
 ) -> Item:
-    """Async wrapper around :func:`issue_item`."""
-    return await db.run_sync(
-        lambda sync_db: issue_item(sync_db, name, qty, tenant_id, user_id)
+    """Issue items from inventory."""
+    if qty <= 0:
+        raise ValueError("Quantity must be positive")
+
+    result = await db.execute(
+        select(Item).where(and_(Item.name == name, Item.tenant_id == tenant_id))
     )
+    item = result.scalars().first()
+
+    if not item or item.available < qty:
+        raise ValueError("Not enough stock to issue")
+
+    item.available -= qty
+    item.in_use += qty
+
+    await _async_log_action(db, user_id, item, "issue", qty)
+    await db.commit()
+    await db.refresh(item)
+    return item
 
 
 async def async_return_item(
@@ -331,35 +392,85 @@ async def async_return_item(
     tenant_id: int,
     user_id: Optional[int] = None,
 ) -> Item:
-    """Async wrapper around :func:`return_item`."""
-    return await db.run_sync(
-        lambda sync_db: return_item(sync_db, name, qty, tenant_id, user_id)
+    """Return items to inventory."""
+    if qty <= 0:
+        raise ValueError("Quantity must be positive")
+
+    result = await db.execute(
+        select(Item).where(and_(Item.name == name, Item.tenant_id == tenant_id))
     )
+    item = result.scalars().first()
+
+    if not item or item.in_use < qty:
+        raise ValueError("Invalid return quantity")
+
+    item.in_use -= qty
+    item.available += qty
+
+    await _async_log_action(db, user_id, item, "return", qty)
+    await db.commit()
+    await db.refresh(item)
+    return item
 
 
 async def async_get_status(
     db: AsyncSession, tenant_id: int, name: Optional[str] = None
 ) -> Dict[str, dict]:
-    """Async wrapper around :func:`get_status`."""
-    return await db.run_sync(lambda sync_db: get_status(sync_db, tenant_id, name))
+    """Get inventory status."""
+    items: Dict[str, dict] = {}
+    query = select(Item).where(Item.tenant_id == tenant_id)
+
+    if name:
+        query = query.where(Item.name == name)
+
+    result = await db.execute(query)
+    for item in result.scalars().all():
+        items[item.name] = {
+            "available": item.available,
+            "in_use": item.in_use,
+            "threshold": item.threshold,
+            "min_par": item.min_par,
+            "department_id": item.department_id,
+            "category_id": item.category_id,
+            "stock_code": item.stock_code,
+            "status": item.status,
+        }
+
+    return items
 
 
 async def async_get_recent_logs(
     db: AsyncSession, limit: int = 10, tenant_id: Optional[int] = None
 ) -> List[AuditLog]:
-    """Async wrapper around :func:`get_recent_logs`."""
-    return await db.run_sync(
-        lambda sync_db: get_recent_logs(sync_db, limit=limit, tenant_id=tenant_id)
-    )
+    """Get recent audit logs."""
+    query = select(AuditLog)
+    if tenant_id is not None:
+        query = query.join(Item).where(Item.tenant_id == tenant_id)
+
+    query = query.order_by(AuditLog.timestamp.desc()).limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()
 
 
 async def async_get_item_history(
     db: AsyncSession, name: str, tenant_id: int, limit: int = 100
 ) -> List[AuditLog]:
-    """Async wrapper around :func:`get_item_history`."""
-    return await db.run_sync(
-        lambda sync_db: get_item_history(sync_db, name, tenant_id, limit)
+    """Get audit log history for an item."""
+    result = await db.execute(
+        select(Item).where(and_(Item.name == name, Item.tenant_id == tenant_id))
     )
+    item = result.scalars().first()
+    if not item:
+        return []
+
+    query = (
+        select(AuditLog)
+        .where(AuditLog.item_id == item.id)
+        .order_by(AuditLog.timestamp.desc())
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    return result.scalars().all()
 
 
 async def async_update_item(
@@ -375,22 +486,36 @@ async def async_update_item(
     status: Optional[str] = None,
     user_id: Optional[int] = None,
 ) -> Item:
-    """Async wrapper around :func:`update_item`."""
-    return await db.run_sync(
-        lambda sync_db: update_item(
-            sync_db,
-            name,
-            tenant_id,
-            new_name,
-            threshold,
-            min_par,
-            department_id,
-            category_id,
-            stock_code,
-            status,
-            user_id,
-        )
+    """Update an item's properties."""
+    result = await db.execute(
+        select(Item).where(and_(Item.name == name, Item.tenant_id == tenant_id))
     )
+    item = result.scalars().first()
+    if not item:
+        raise ValueError("Item not found")
+
+    if new_name:
+        item.name = new_name
+    if threshold is not None:
+        if threshold < 0:
+            raise ValueError("Threshold cannot be negative")
+        item.threshold = threshold
+    if min_par is not None:
+        if min_par < 0:
+            raise ValueError("Min par cannot be negative")
+        item.min_par = min_par
+    if department_id is not None:
+        item.department_id = department_id
+    if category_id is not None:
+        item.category_id = category_id
+    if stock_code is not None:
+        item.stock_code = stock_code
+    if status is not None:
+        item.status = status
+
+    await db.commit()
+    await db.refresh(item)
+    return item
 
 
 async def async_delete_item(
@@ -399,10 +524,17 @@ async def async_delete_item(
     tenant_id: int,
     user_id: Optional[int] = None,
 ) -> None:
-    """Async wrapper around :func:`delete_item`."""
-    await db.run_sync(
-        lambda sync_db: delete_item(sync_db, name, tenant_id, user_id)
+    """Delete an item."""
+    result = await db.execute(
+        select(Item).where(and_(Item.name == name, Item.tenant_id == tenant_id))
     )
+    item = result.scalars().first()
+    if not item:
+        raise ValueError("Item not found")
+
+    await _async_log_action(db, user_id, item, "delete", 0)
+    await db.delete(item)
+    await db.commit()
 
 
 async def async_transfer_item(
@@ -413,14 +545,41 @@ async def async_transfer_item(
     to_tenant_id: int,
     user_id: Optional[int] = None,
 ) -> Tuple[Item, Item]:
-    """Async wrapper around :func:`transfer_item`."""
-    return await db.run_sync(
-        lambda sync_db: transfer_item(
-            sync_db,
-            name,
-            qty,
-            from_tenant_id,
-            to_tenant_id,
-            user_id,
-        )
+    """Transfer items between tenants."""
+    if qty <= 0:
+        raise ValueError("Quantity must be positive")
+
+    result = await db.execute(
+        select(Item).where(and_(Item.name == name, Item.tenant_id == from_tenant_id))
     )
+    from_item = result.scalars().first()
+    if not from_item or from_item.available < qty:
+        raise ValueError("Not enough stock to transfer")
+
+    result = await db.execute(
+        select(Item).where(and_(Item.name == name, Item.tenant_id == to_tenant_id))
+    )
+    to_item = result.scalars().first()
+    if not to_item:
+        to_item = Item(
+            name=name,
+            tenant_id=to_tenant_id,
+            available=0,
+            in_use=0,
+            threshold=from_item.threshold,
+            min_par=from_item.min_par,
+            department_id=from_item.department_id,
+            category_id=from_item.category_id,
+            stock_code=from_item.stock_code,
+            status=from_item.status,
+        )
+        db.add(to_item)
+
+    from_item.available -= qty
+    to_item.available += qty
+
+    await _async_log_action(db, user_id, from_item, "transfer", qty)
+    await db.commit()
+    await db.refresh(from_item)
+    await db.refresh(to_item)
+    return from_item, to_item

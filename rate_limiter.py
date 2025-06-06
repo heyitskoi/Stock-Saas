@@ -25,7 +25,10 @@ class RateLimiter:
             if self._memory_store is not None:
                 queue = [t for t in self._memory_store[key] if t > now - self.window]
                 if len(queue) >= self.limit:
-                    return JSONResponse(status_code=429, content={"detail": "Too many requests"})
+                    return JSONResponse(
+                        status_code=429,
+                        content={"detail": "Too many requests"},
+                    )
                 queue.append(now)
                 self._memory_store[key] = queue
             else:
@@ -33,7 +36,10 @@ class RateLimiter:
                     await r.zremrangebyscore(key, 0, now - self.window)
                     count = await r.zcard(key)
                     if count >= self.limit:
-                        return JSONResponse(status_code=429, content={"detail": "Too many requests"})
+                        return JSONResponse(
+                            status_code=429,
+                            content={"detail": "Too many requests"},
+                        )
                     await r.zadd(key, {str(now): now})
                     await r.expire(key, self.window)
         response = await call_next(request)

@@ -1,5 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, conint
+
 try:
     from pydantic import ConfigDict
 except Exception:
