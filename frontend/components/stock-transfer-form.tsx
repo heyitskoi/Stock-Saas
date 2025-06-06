@@ -71,7 +71,8 @@ export function StockTransferForm({
     if (!item) return
 
     onSubmit({
-      itemId: item.id,
+      // Convert numeric ID to string for consumers
+      itemId: item.id.toString(),
       quantity,
       fromDepartmentId: currentDepartmentId,
       toDepartmentId: transferType === "internal" ? toDepartmentId : "customer",
@@ -133,7 +134,10 @@ export function StockTransferForm({
               <Label className="text-right">From</Label>
               <div className="col-span-3">
                 <Input
-                  value={departments.find((d) => d.id === currentDepartmentId)?.name || "Current Department"}
+                  value={
+                    departments.find((d) => d.id.toString() === currentDepartmentId)?.name ||
+                    "Current Department"
+                  }
                   readOnly
                   className="bg-muted"
                 />
@@ -173,9 +177,9 @@ export function StockTransferForm({
                   </SelectTrigger>
                   <SelectContent>
                     {departments
-                      .filter((dept) => dept.id !== currentDepartmentId)
+                      .filter((dept) => dept.id.toString() !== currentDepartmentId)
                       .map((department) => (
-                        <SelectItem key={department.id} value={department.id}>
+                        <SelectItem key={department.id} value={department.id.toString()}>
                           {department.name}
                         </SelectItem>
                       ))}

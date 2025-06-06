@@ -92,7 +92,7 @@ export function Header({
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
+                    <SelectItem key={category.id} value={category.id.toString()}>
                       {category.name}
                     </SelectItem>
                   ))}
@@ -138,7 +138,7 @@ export function Header({
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
                   {departments.map((department) => (
-                    <SelectItem key={department.id} value={department.id}>
+                    <SelectItem key={department.id} value={department.id.toString()}>
                       {department.name}
                     </SelectItem>
                   ))}

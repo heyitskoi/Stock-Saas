@@ -1,6 +1,8 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-type ApiFetchOptions = RequestInit & { body?: any };
+// Allow using plain objects for the request body by removing the
+// `body` property from `RequestInit` and redefining it with a looser type.
+export type ApiFetchOptions = Omit<RequestInit, 'body'> & { body?: any };
 
 export const isAuthenticated = () =>
   typeof window !== 'undefined' && !!localStorage.getItem('token');
