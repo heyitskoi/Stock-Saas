@@ -169,3 +169,8 @@ class RegisterRequest(BaseModel):
     password: str
     department_id: int | None = None
     is_admin: bool = False
+
+
+class RegisterResponse(BaseModel):
+    user: UserResponse
+    totp_secret: str
