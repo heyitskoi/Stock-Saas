@@ -1,7 +1,7 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { updateUser } from '../lib/api';
-import { useAuth } from '../lib/AuthContext';
+import { useAuth } from '@/lib/auth-context';
 
 export default function EditUserPage() {
   const router = useRouter();

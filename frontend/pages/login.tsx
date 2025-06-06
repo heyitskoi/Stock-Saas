@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { useAuth } from '../lib/AuthContext';
+import { useAuth } from '@/lib/auth-context';
 
 export default function Login() {
   const router = useRouter();
