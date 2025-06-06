@@ -5,11 +5,45 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, PasswordResetToken
+from models import User, PasswordResetToken, Tenant
 from auth import get_password_hash
-from schemas import PasswordResetRequest, PasswordResetConfirm
+from schemas import (
+    PasswordResetRequest,
+    PasswordResetConfirm,
+    RegisterRequest,
+    UserResponse,
+)
 
 router = APIRouter(prefix="/auth")
+
+
+@router.post("/register", response_model=UserResponse)
+def register(payload: RegisterRequest, db: Session = Depends(get_db)):
+    if db.query(User).filter(User.username == payload.email).first():
+        raise HTTPException(status_code=400, detail="Username already registered")
+
+    if payload.department_id is not None:
+        tenant = db.query(Tenant).filter(Tenant.id == payload.department_id).first()
+        if not tenant:
+            raise HTTPException(status_code=404, detail="Department not found")
+    else:
+        tenant = Tenant(name=payload.email)
+        db.add(tenant)
+        db.commit()
+        db.refresh(tenant)
+
+    role = "admin" if payload.is_admin else "user"
+    user = User(
+        username=payload.email,
+        hashed_password=get_password_hash(payload.password),
+        role=role,
+        tenant_id=tenant.id,
+        notification_preference="email",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 @router.post("/request-reset")

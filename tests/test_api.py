@@ -187,3 +187,30 @@ def test_export_csv_pending(client):
         assert resp.status_code == 202
     finally:
         analytics._generate_csv = original
+
+
+def test_register_success(client):
+    resp = client.post(
+        "/auth/register",
+        json={"email": "new@example.com", "password": "secret", "is_admin": False},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["username"] == "new@example.com"
+    assert data["tenant_id"]
+
+
+def test_register_duplicate_username(client):
+    payload = {"email": "dup@example.com", "password": "x"}
+    first = client.post("/auth/register", json=payload)
+    assert first.status_code == 200
+    second = client.post("/auth/register", json=payload)
+    assert second.status_code == 400
+
+
+def test_register_missing_department(client):
+    resp = client.post(
+        "/auth/register",
+        json={"email": "nodpt@example.com", "password": "pw", "department_id": 99},
+    )
+    assert resp.status_code == 404

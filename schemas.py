@@ -102,3 +102,10 @@ class PasswordResetRequest(BaseModel):
 class PasswordResetConfirm(BaseModel):
     token: str
     new_password: str
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    department_id: int | None = None
+    is_admin: bool = False
