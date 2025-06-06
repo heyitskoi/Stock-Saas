@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getOverallUsage, getItems } from '../lib/api';
-import { useAuth } from '../lib/AuthContext';
+import { useAuth } from '@/lib/auth-context';
 
 import {
   Chart as ChartJS,
