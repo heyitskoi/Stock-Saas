@@ -4,6 +4,7 @@ SQLAlchemy
 asyncpg
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt==4.0.1
 python-multipart
 httpx==0.27.2
 aiosqlite
