@@ -51,7 +51,11 @@ def update_user(
     db: Session = Depends(get_db),
     user: User = Depends(admin_only),
 ):
-    user_obj = db.query(User).filter(User.id == payload.id).first()
+    user_obj = (
+        db.query(User)
+        .filter(User.id == payload.id, User.tenant_id == user.tenant_id)
+        .first()
+    )
     if not user_obj:
         raise HTTPException(status_code=404, detail="User not found")
     if payload.username:
@@ -79,7 +83,11 @@ def delete_user(
     db: Session = Depends(get_db),
     user: User = Depends(admin_only),
 ):
-    user_obj = db.query(User).filter(User.id == payload.id).first()
+    user_obj = (
+        db.query(User)
+        .filter(User.id == payload.id, User.tenant_id == user.tenant_id)
+        .first()
+    )
     if not user_obj:
         raise HTTPException(status_code=404, detail="User not found")
     db.delete(user_obj)

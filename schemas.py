@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, conint, root_validator
 
 
 class ItemBase(BaseModel):
@@ -11,8 +11,8 @@ class ItemBase(BaseModel):
 
 class ItemCreate(BaseModel):
     name: str
-    quantity: int
-    threshold: int = 0
+    quantity: conint(gt=0)
+    threshold: conint(ge=0) = 0
     tenant_id: int
 
 
@@ -20,7 +20,7 @@ class ItemUpdate(BaseModel):
     name: str
     tenant_id: int
     new_name: str | None = None
-    threshold: int | None = None
+    threshold: conint(ge=0) | None = None
 
 
 class ItemDelete(BaseModel):
@@ -38,7 +38,7 @@ class ItemResponse(ItemBase):
 
 class UserBase(BaseModel):
     username: str
-    notification_preference: str = "email"
+    notification_preference: str = "email"  # "email", "slack" or "none"
 
 
 class UserCreate(UserBase):
@@ -93,3 +93,12 @@ class TenantResponse(TenantBase):
 
     class Config:
         orm_mode = True
+
+
+class PasswordResetRequest(BaseModel):
+    username: str
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str

@@ -40,6 +40,10 @@ def add_item(
     tenant_id: int,
     user_id: Optional[int] = None,
 ) -> Item:
+    if qty <= 0:
+        raise ValueError("Quantity must be positive")
+    if threshold < 0:
+        raise ValueError("Threshold cannot be negative")
     item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item:
         item = Item(
@@ -69,6 +73,8 @@ def issue_item(
     tenant_id: int,
     user_id: Optional[int] = None,
 ) -> Item:
+    if qty <= 0:
+        raise ValueError("Quantity must be positive")
     item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item or item.available < qty:
         raise ValueError("Not enough stock to issue")
@@ -89,6 +95,8 @@ def return_item(
     tenant_id: int,
     user_id: Optional[int] = None,
 ) -> Item:
+    if qty <= 0:
+        raise ValueError("Quantity must be positive")
     item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item or item.in_use < qty:
         raise ValueError("Invalid return quantity")
@@ -153,6 +161,8 @@ def update_item(
     if new_name:
         item.name = new_name
     if threshold is not None:
+        if threshold < 0:
+            raise ValueError("Threshold cannot be negative")
         item.threshold = threshold
 
     _log_action(db, user_id, item, "update", 0)
@@ -185,6 +195,10 @@ async def async_add_item(
     tenant_id: int,
     user_id: Optional[int] = None,
 ) -> Item:
+    if qty <= 0:
+        raise ValueError("Quantity must be positive")
+    if threshold < 0:
+        raise ValueError("Threshold cannot be negative")
     result = await db.execute(
         select(Item).where(Item.name == name, Item.tenant_id == tenant_id)
     )
@@ -217,6 +231,8 @@ async def async_issue_item(
     tenant_id: int,
     user_id: Optional[int] = None,
 ) -> Item:
+    if qty <= 0:
+        raise ValueError("Quantity must be positive")
     result = await db.execute(
         select(Item).where(Item.name == name, Item.tenant_id == tenant_id)
     )
@@ -240,6 +256,8 @@ async def async_return_item(
     tenant_id: int,
     user_id: Optional[int] = None,
 ) -> Item:
+    if qty <= 0:
+        raise ValueError("Quantity must be positive")
     result = await db.execute(
         select(Item).where(Item.name == name, Item.tenant_id == tenant_id)
     )
@@ -312,6 +330,8 @@ async def async_update_item(
     if new_name:
         item.name = new_name
     if threshold is not None:
+        if threshold < 0:
+            raise ValueError("Threshold cannot be negative")
         item.threshold = threshold
 
     await _async_log_action(db, user_id, item, "update", 0)

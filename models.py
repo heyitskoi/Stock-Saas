@@ -38,6 +38,7 @@ class User(Base):
     hashed_password = Column(String)
     role = Column(String, default="user")
     tenant_id = Column(Integer, ForeignKey("tenants.id"))
+    # "email", "slack" or "none"
     notification_preference = Column(String, default="email")
 
     tenant = relationship("Tenant", back_populates="users")
@@ -67,3 +68,14 @@ class Notification(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     item = relationship("Item")
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    token = Column(String, unique=True, index=True)
+    expires_at = Column(DateTime)
+
+    user = relationship("User")

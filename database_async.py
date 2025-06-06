@@ -1,14 +1,12 @@
-import os
-from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 
-load_dotenv()
+from config import settings
 
 # Build async database URL from DATABASE_URL when ASYNC_DATABASE_URL isn't set
-ASYNC_DATABASE_URL = os.getenv("ASYNC_DATABASE_URL")
+ASYNC_DATABASE_URL = settings.async_database_url
 if not ASYNC_DATABASE_URL:
-    db_url = os.getenv("DATABASE_URL", "sqlite:///./inventory.db")
+    db_url = settings.database_url
     if db_url.startswith("postgresql://"):
         ASYNC_DATABASE_URL = db_url.replace("postgresql://", "postgresql+asyncpg://")
     elif db_url.startswith("sqlite://"):

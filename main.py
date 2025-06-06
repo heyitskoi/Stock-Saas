@@ -1,5 +1,6 @@
-import os
 import asyncio
+
+from config import settings
 
 from fastapi import FastAPI, HTTPException, Depends, WebSocket
 from fastapi.security import OAuth2PasswordRequestForm
@@ -38,6 +39,7 @@ from schemas import (
 )
 from routers.users import router as users_router
 from routers.analytics import router as analytics_router
+from routers.auth import router as auth_router
 from websocket_manager import InventoryWSManager
 from rate_limiter import RateLimiter
 
@@ -55,7 +57,7 @@ app = FastAPI(
 ws_manager = InventoryWSManager()
 
 # Configure CORS
-frontend_origin = os.getenv("NEXT_PUBLIC_API_URL")
+frontend_origin = settings.next_public_api_url
 origins = [frontend_origin] if frontend_origin else []
 if DATABASE_URL.startswith("sqlite"):
     origins = ["*"]
@@ -77,6 +79,7 @@ app.add_middleware(BaseHTTPMiddleware, dispatch=rate_limiter)
 Base.metadata.create_all(bind=engine)
 app.include_router(users_router)
 app.include_router(analytics_router)
+app.include_router(auth_router)
 
 
 @app.websocket("/ws/inventory/{tenant_id}")
@@ -91,8 +94,8 @@ async def inventory_ws(websocket: WebSocket, tenant_id: int):
 
 @app.on_event("startup")
 def create_default_admin():
-    username = os.getenv("ADMIN_USERNAME")
-    password = os.getenv("ADMIN_PASSWORD")
+    username = settings.admin_username
+    password = settings.admin_password
     if not (username and password) and DATABASE_URL.startswith("sqlite"):
         username = username or "admin"
         password = password or "admin"
@@ -161,6 +164,18 @@ async def api_add_item(
             },
         )
     )
+    if item.threshold and item.available < item.threshold:
+        asyncio.create_task(
+            ws_manager.broadcast(
+                payload.tenant_id,
+                {
+                    "event": "low_stock",
+                    "item": item.name,
+                    "available": item.available,
+                    "threshold": item.threshold,
+                },
+            )
+        )
     return item
 
 
@@ -190,6 +205,18 @@ async def api_issue_item(
                 },
             )
         )
+        if item.threshold and item.available < item.threshold:
+            asyncio.create_task(
+                ws_manager.broadcast(
+                    payload.tenant_id,
+                    {
+                        "event": "low_stock",
+                        "item": item.name,
+                        "available": item.available,
+                        "threshold": item.threshold,
+                    },
+                )
+            )
         return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -221,6 +248,18 @@ async def api_return_item(
                 },
             )
         )
+        if item.threshold and item.available < item.threshold:
+            asyncio.create_task(
+                ws_manager.broadcast(
+                    payload.tenant_id,
+                    {
+                        "event": "low_stock",
+                        "item": item.name,
+                        "available": item.available,
+                        "threshold": item.threshold,
+                    },
+                )
+            )
         return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -283,6 +322,18 @@ async def api_update_item(
                 },
             )
         )
+        if item.threshold and item.available < item.threshold:
+            asyncio.create_task(
+                ws_manager.broadcast(
+                    payload.tenant_id,
+                    {
+                        "event": "low_stock",
+                        "item": item.name,
+                        "available": item.available,
+                        "threshold": item.threshold,
+                    },
+                )
+            )
         return item
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

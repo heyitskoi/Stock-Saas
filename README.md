@@ -23,11 +23,11 @@ below a configured threshold, a warning is displayed during the status check.
 
 ## Quickstart
 
-1. Copy `.env.example` to `.env` and adjust values.
-   Required settings include `DATABASE_URL`, `SECRET_KEY`,
-   `ADMIN_USERNAME`, `ADMIN_PASSWORD` and `NEXT_PUBLIC_API_URL` for the
-   frontend. Optional variables configure background workers:
-   `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`, `SLACK_WEBHOOK_URL`,
+1. Copy `.env.example` to `.env` and adjust values. At a minimum set
+   `SECRET_KEY`. `DATABASE_URL` defaults to SQLite but can be overridden.
+   Optional settings include `ADMIN_USERNAME`, `ADMIN_PASSWORD`,
+   `NEXT_PUBLIC_API_URL` for the frontend and background worker variables
+   such as `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`, `SLACK_WEBHOOK_URL`,
    `SMTP_SERVER`, `ALERT_EMAIL_TO` and `ALERT_EMAIL_FROM`.
 2. Install Python dependencies and start the API:
 
@@ -62,10 +62,10 @@ python inventory.py status
 ```
 
 Inventory data is stored in a SQLite database named `inventory.db` by default.
-Set `DATABASE_URL` to use a different database engine. You can also provide
+Set `DATABASE_URL` to use a different database engine. The application reads all
+settings via `config.py` from environment variables defined in `.env`. Provide
 `ADMIN_USERNAME` and `ADMIN_PASSWORD` to specify the first admin user's
-credentials. The API also expects a `SECRET_KEY` environment variable used to
-sign JWT tokens.
+credentials and ensure `SECRET_KEY` is set for signing JWT tokens.
 
 
 ## Running the API
@@ -82,6 +82,14 @@ uvicorn main:app --reload
 
 API endpoints mirror the CLI commands and are documented at `/docs` when the server is running.
 Authenticate by posting your username and password to `/token` and include the returned token using `Authorization: Bearer <token>`.
+
+### Required headers and parameters
+
+All authenticated endpoints require an `Authorization` header with the JWT token
+returned from `/token`. POST and PUT requests should also include
+`Content-Type: application/json`.
+Every API call must provide a `tenant_id` value (query parameter or JSON body)
+to ensure the request is scoped to the correct tenant.
 
 ## Database migrations
 
@@ -206,15 +214,18 @@ docker build -t stock-saas-backend .
 docker run -e SECRET_KEY=mysecret -p 8000:8000 stock-saas-backend
 ```
 
-To start the backend together with a PostgreSQL database and the Next.js frontend use `docker-compose`:
+To start the backend together with a PostgreSQL database, Nginx reverse proxy and the Next.js frontend use `docker-compose`:
 
 ```bash
+cp .env.example .env
+# edit values as needed
 docker-compose up --build
 ```
 
 The compose file also starts Redis along with Celery worker and beat containers
-for background tasks. The API will be available on `http://localhost:8000` and
-the frontend on `http://localhost:3000`.
+for background tasks. Nginx listens on port `80` and forwards requests to the
+FastAPI backend running on `backend:8000`. The API is thus reachable on
+`http://localhost` while the frontend remains on `http://localhost:3000`.
 
 
 
