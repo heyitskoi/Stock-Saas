@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     admin_password: str | None = Field(None, env="ADMIN_PASSWORD")
     next_public_api_url: str | None = Field(None, env="NEXT_PUBLIC_API_URL")
     celery_broker_url: str = Field("redis://localhost:6379/0", env="CELERY_BROKER_URL")
+    redis_url: str = Field("redis://localhost:6379/1", env="REDIS_URL")
     stock_check_interval: int = Field(3600, env="STOCK_CHECK_INTERVAL")
     async_database_url: str | None = Field(None, env="ASYNC_DATABASE_URL")
     slack_webhook_url: str | None = Field(None, env="SLACK_WEBHOOK_URL")
