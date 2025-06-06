@@ -8,6 +8,9 @@ Audit Logging	Item changes recorded in DB
 Roadmap Vision	Clear plan to expand into web, multi-user system
 Modular Architecture	Multi-agent, modular backend, API-focused
 REST API	FastAPI endpoints for add/issue/return/status
+Departments & Categories       Manage stock groups and transfer items
+Registration Endpoint  Allow new user sign up
+WebSocket Alerts        Real-time low stock warnings
 1. Security & Authentication
 Expectation	Why it Matters
 ✅ Authenticated access (JWT) - implemented
@@ -74,5 +77,5 @@ Offline queuing	Let actions queue locally when internet is down (sync later)
 Expectation	Why it Matters
 Query/index optimization	As item volume grows
 Background jobs (e.g., Celery)	For large reports, reminders, webhooks
-Rate limiting	To avoid abuse or overloading APIs
+✅ Rate limiting	To avoid abuse or overloading APIs
 
