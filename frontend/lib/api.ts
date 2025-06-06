@@ -48,3 +48,58 @@ export const apiGet = <T>(path: string, options?: ApiFetchOptions) =>
 
 export const apiPost = <T>(path: string, body?: any, options?: ApiFetchOptions) =>
   apiFetch<T>(path, { method: 'POST', body, ...(options || {}) });
+
+export async function login(username: string, password: string) {
+  const body = new URLSearchParams();
+  body.set('username', username);
+  body.set('password', password);
+  const res = await apiPost<{ access_token: string }>('/token', body);
+  return res.access_token;
+}
+
+// Inventory APIs
+export const addItem = (token: string, data: any) =>
+  apiPost<any>('/items/add', { ...data, tenant_id: 1 });
+
+export const issueItem = (token: string, data: any) =>
+  apiPost<any>('/items/issue', { ...data, tenant_id: 1 });
+
+export const returnItem = (token: string, data: any) =>
+  apiPost<any>('/items/return', { ...data, tenant_id: 1 });
+
+export const updateItemApi = (token: string, data: any) =>
+  apiFetch<any>('/items/update', {
+    method: 'PUT',
+    body: { ...data, tenant_id: 1 },
+  });
+
+export const getItems = (token: string) =>
+  apiGet<any[]>('/items/status?tenant_id=1');
+
+// Analytics
+export const getOverallUsage = (
+  token: string,
+  params: Record<string, string | number>
+) => {
+  const query = new URLSearchParams(params as any).toString();
+  return apiGet<any[]>(`/analytics/usage?${query}`);
+};
+
+// User management
+export const listUsers = (token: string) =>
+  apiGet<any[]>('/users/?tenant_id=1');
+
+export const createUser = (token: string, data: any) =>
+  apiPost<any>('/users/', { ...data, tenant_id: 1 });
+
+export const updateUser = (token: string, data: any) =>
+  apiFetch<any>('/users/update', {
+    method: 'PUT',
+    body: data,
+  });
+
+export const deleteUser = (token: string, id: number) =>
+  apiFetch<any>('/users/delete', {
+    method: 'DELETE',
+    body: { id },
+  });
