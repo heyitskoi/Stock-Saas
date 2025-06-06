@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Header } from "./header"
 import { Sidebar } from "./sidebar"
 import { MainPanel } from "./main-panel"
@@ -182,6 +182,21 @@ export function StockDashboard() {
   const [newDepartmentIcon, setNewDepartmentIcon] = useState(ICON_LIST[0].name) // Default to first icon
   const [iconSearch, setIconSearch] = useState("")
 
+  const loadItems = useCallback(async () => {
+    try {
+      setIsLoading(prev => ({ ...prev, items: true }))
+      const data = await apiGet<StockItem[]>("/items/status?tenant_id=1")
+      if (Array.isArray(data)) {
+        setItems(data)
+      }
+    } catch (err) {
+      console.error("Failed to fetch items", err)
+      if (isDev) setItems(sampleItems)
+    } finally {
+      setIsLoading(prev => ({ ...prev, items: false }))
+    }
+  }, [])
+
   // Fetch departments and categories from API on mount - only once
   useEffect(() => {
     const fetchData = async () => {
@@ -227,22 +242,37 @@ export function StockDashboard() {
 
   // Fetch items on mount
   useEffect(() => {
-    const loadItems = async () => {
+    loadItems()
+  }, [loadItems])
+
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    const protocol = apiUrl.startsWith('https') ? 'wss' : 'ws'
+    const host = apiUrl.replace(/^https?:\/\//, '')
+    const ws = new WebSocket(`${protocol}://${host}/ws/inventory/1`)
+
+    ws.onmessage = (event) => {
       try {
-        setIsLoading(prev => ({ ...prev, items: true }))
-        const data = await apiGet<StockItem[]>("/items/status")
-        if (Array.isArray(data)) {
-          setItems(data)
+        const data = JSON.parse(event.data)
+        if (['update', 'transfer', 'delete'].includes(data.event)) {
+          loadItems()
+        }
+        if (data.event === 'low_stock') {
+          toast({
+            title: 'Low Stock',
+            description: `${data.item} has ${data.available} remaining (threshold ${data.threshold})`,
+            variant: 'destructive',
+          })
         }
       } catch (err) {
-        console.error("Failed to fetch items", err)
-        if (isDev) setItems(sampleItems)
-      } finally {
-        setIsLoading(prev => ({ ...prev, items: false }))
+        console.error('WebSocket message error', err)
       }
     }
-    loadItems()
-  }, [])
+
+    return () => {
+      ws.close()
+    }
+  }, [loadItems, toast])
 
   // Filter items based on search term and filter options
   const filteredItems = items.filter((item) => {

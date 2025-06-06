@@ -2,7 +2,7 @@ import asyncio
 
 from config import settings
 
-from fastapi import FastAPI, HTTPException, Depends, WebSocket
+from fastapi import FastAPI, HTTPException, Depends, WebSocket, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -24,6 +24,7 @@ from inventory_core import (
     async_delete_item,
 )
 from auth import login_for_access_token, require_role, get_password_hash
+import pyotp
 from models import User, Tenant
 from schemas import (
     ItemCreate,
@@ -123,6 +124,7 @@ def create_default_admin():
             hashed_password=get_password_hash(password),
             role="admin",
             tenant_id=tenant.id,
+            totp_secret=pyotp.random_base32(),
             notification_preference="email",
         )
         db.add(admin)
@@ -138,10 +140,11 @@ any_user = require_role(["admin", "manager", "user"])
 @app.post("/token")
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
+    totp: str = Form(...),
     db: AsyncSession = Depends(get_async_db),
 ):
     """Authenticate a user and return a JWT access token."""
-    return await login_for_access_token(form_data, db)
+    return await login_for_access_token(form_data, totp, db)
 
 
 @app.post("/items/add", response_model=ItemResponse, summary="Add items to inventory")

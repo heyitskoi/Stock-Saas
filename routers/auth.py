@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import secrets
+import pyotp
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -11,13 +12,14 @@ from schemas import (
     PasswordResetRequest,
     PasswordResetConfirm,
     RegisterRequest,
+    RegisterResponse,
     UserResponse,
 )
 
 router = APIRouter(prefix="/auth")
 
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register", response_model=RegisterResponse)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == payload.email).first():
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -33,17 +35,19 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         db.refresh(tenant)
 
     role = "admin" if payload.is_admin else "user"
+    secret = pyotp.random_base32()
     user = User(
         username=payload.email,
         hashed_password=get_password_hash(payload.password),
         role=role,
         tenant_id=tenant.id,
+        totp_secret=secret,
         notification_preference="email",
     )
     db.add(user)
     db.commit()
     db.refresh(user)
-    return user
+    return RegisterResponse(user=user, totp_secret=secret)
 
 
 @router.post("/request-reset")
