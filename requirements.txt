@@ -17,3 +17,5 @@ python-dotenv
 pytest
 pydantic-settings
 pyotp
+PyYAML>=6.0.1
+

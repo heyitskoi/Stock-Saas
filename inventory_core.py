@@ -227,54 +227,6 @@ def update_item(
         item.stock_code = stock_code
     if status is not None:
         item.status = status
-    if min_par is not None:
-        if min_par < 0:
-            raise ValueError("min_par cannot be negative")
-        item.min_par = min_par
-    if department_id is not None:
-        item.department_id = department_id
-    if category_id is not None:
-        item.category_id = category_id
-    if stock_code is not None:
-        item.stock_code = stock_code
-    if status is not None:
-        item.status = status
-    if min_par is not None:
-        if min_par < 0:
-            raise ValueError("min_par cannot be negative")
-        item.min_par = min_par
-    if department_id is not None:
-        item.department_id = department_id
-    if category_id is not None:
-        item.category_id = category_id
-    if stock_code is not None:
-        item.stock_code = stock_code
-    if status is not None:
-        item.status = status
-    if min_par is not None:
-        if min_par < 0:
-            raise ValueError("min_par cannot be negative")
-        item.min_par = min_par
-    if department_id is not None:
-        item.department_id = department_id
-    if category_id is not None:
-        item.category_id = category_id
-    if stock_code is not None:
-        item.stock_code = stock_code
-    if status is not None:
-        item.status = status
-    if min_par is not None:
-        if min_par < 0:
-            raise ValueError("min_par cannot be negative")
-        item.min_par = min_par
-    if department_id is not None:
-        item.department_id = department_id
-    if category_id is not None:
-        item.category_id = category_id
-    if stock_code is not None:
-        item.stock_code = stock_code
-    if status is not None:
-        item.status = status
 
     _log_action(db, user_id, item, "update", 0)
     db.commit()
