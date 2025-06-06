@@ -4,7 +4,6 @@ from fastapi.testclient import TestClient
 import httpx
 import pytest
 import inspect
-import pyotp
 import tests.conftest as conf
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -66,13 +65,11 @@ def client():
             adb.add(tenant)
             await adb.commit()
             await adb.refresh(tenant)
-            conf.ADMIN_TOTP_SECRET = pyotp.random_base32()
             admin = User(
                 username="admin",
                 hashed_password=get_password_hash("admin"),
                 role="admin",
                 tenant_id=tenant.id,
-                totp_secret=conf.ADMIN_TOTP_SECRET,
                 notification_preference="email",
             )
             adb.add(admin)
@@ -107,10 +104,9 @@ def client():
 
 
 def _get_token(client: TestClient) -> str:
-    otp = pyotp.TOTP(conf.ADMIN_TOTP_SECRET).now()
     resp = client.post(
         "/token",
-        data={"username": "admin", "password": "admin", "totp": otp},
+        data={"username": "admin", "password": "admin"},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     assert (

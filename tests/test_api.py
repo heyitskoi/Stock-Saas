@@ -1,5 +1,4 @@
 from tests.conftest import get_token
-import pyotp
 
 
 def test_multi_tenant_isolation(client):
@@ -14,23 +13,20 @@ def test_multi_tenant_isolation(client):
     _session.commit()
     _session.refresh(tenant2)
 
-    admin2_secret = pyotp.random_base32()
     admin2 = User(
         username="admin2",
         hashed_password=get_password_hash("admin2"),
         role="admin",
         tenant_id=tenant2.id,
-        totp_secret=admin2_secret,
         notification_preference="email",
     )
     _session.add(admin2)
     _session.commit()
 
     token1 = get_token(client)
-    otp2 = pyotp.TOTP(admin2_secret).now()
     resp = client.post(
         "/token",
-        data={"username": "admin2", "password": "admin2", "totp": otp2},
+        data={"username": "admin2", "password": "admin2"},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     assert resp.status_code == 200
@@ -263,7 +259,6 @@ def test_register_success(client):
     data = resp.json()
     assert data["user"]["username"] == "new@example.com"
     assert data["user"]["tenant_id"]
-    assert "totp_secret" in data
 
 
 def test_register_duplicate_username(client):

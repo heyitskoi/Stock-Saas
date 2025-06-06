@@ -7,7 +7,6 @@ import { useAuth } from '@/lib/auth-context';
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [totp, setTotp] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
@@ -18,7 +17,7 @@ export default function LoginForm() {
     setIsLoading(true);
 
     try {
-      await login(email, password, totp);
+      await login(email, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {
@@ -62,19 +61,6 @@ export default function LoginForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-          />
-        </div>
-        <div className="mb-6">
-          <label htmlFor="totp" className="block text-sm font-medium text-gray-700 mb-1">
-            Two-Factor Code
-          </label>
-          <input
-            id="totp"
-            type="text"
-            value={totp}
-            onChange={(e) => setTotp(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
