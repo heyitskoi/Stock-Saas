@@ -1,4 +1,5 @@
 from functools import lru_cache
+
 try:
     from pydantic_settings import BaseSettings  # type: ignore
     from pydantic import Field, ConfigDict
@@ -8,6 +9,7 @@ except Exception:  # fallback if package missing or using pydantic v1
     except Exception:
         from pydantic import BaseSettings  # type: ignore
     from pydantic import Field
+
     ConfigDict = None
 
 from secrets_manager import get_manager
@@ -17,9 +19,11 @@ class Settings(BaseSettings):
     if ConfigDict is not None:
         model_config = ConfigDict(extra="ignore", env_file=".env")
     else:
+
         class Config:
             extra = "ignore"
             env_file = ".env"
+
     database_url: str = Field("sqlite:///./inventory.db", env="DATABASE_URL")
     secret_key: str | None = Field(None, env="SECRET_KEY")
     secret_store_file: str | None = Field(None, env="SECRET_STORE_FILE")
@@ -27,6 +31,9 @@ class Settings(BaseSettings):
     admin_password: str | None = Field(None, env="ADMIN_PASSWORD")
     next_public_api_url: str | None = Field(None, env="NEXT_PUBLIC_API_URL")
     celery_broker_url: str = Field("redis://localhost:6379/0", env="CELERY_BROKER_URL")
+    rate_limit_redis_url: str = Field(
+        "redis://localhost:6379/1", env="RATE_LIMIT_REDIS_URL"
+    )
     stock_check_interval: int = Field(3600, env="STOCK_CHECK_INTERVAL")
     async_database_url: str | None = Field(None, env="ASYNC_DATABASE_URL")
     slack_webhook_url: str | None = Field(None, env="SLACK_WEBHOOK_URL")

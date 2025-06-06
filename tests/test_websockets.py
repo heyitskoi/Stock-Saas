@@ -87,7 +87,9 @@ def client():
 
     with _make_test_client(main.app) as c:
         if hasattr(main.app.state, "rate_limiter"):
-            main.app.state.rate_limiter.attempts.clear()
+            asyncio.get_event_loop().run_until_complete(
+                main.app.state.rate_limiter.reset()
+            )
         yield c
 
     main.app.dependency_overrides.clear()
