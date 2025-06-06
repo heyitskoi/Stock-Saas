@@ -15,6 +15,7 @@ from auth import get_password_hash
 
 os.environ.setdefault("SECRET_KEY", "test-secret")
 
+
 @pytest.fixture
 def client():
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
@@ -86,5 +87,7 @@ def get_token(client: TestClient) -> str:
         data={"username": "admin", "password": "admin"},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
-    assert resp.status_code == 200, f"Token request failed: {resp.status_code}, {resp.text}"
+    assert resp.status_code == 200, (
+        f"Token request failed: {resp.status_code}, {resp.text}"
+    )
     return resp.json()["access_token"]
