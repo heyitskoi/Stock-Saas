@@ -1,14 +1,5 @@
 import os
 import tempfile
-
-# Setup temporary SQLite DB path
-db_fd, db_path = tempfile.mkstemp(prefix="test_async", suffix=".db")
-os.close(db_fd)
-os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
-os.environ["ASYNC_DATABASE_URL"] = f"sqlite+aiosqlite:///{db_path}"
-os.environ.setdefault("SECRET_KEY", "test-secret")
-
-# Now safe to import app and DB modules
 from fastapi.testclient import TestClient
 import pytest
 from sqlalchemy import create_engine
@@ -16,11 +7,17 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 import asyncio
 import database_async
-
 import database
 import main
 from models import User, Tenant
 from auth import get_password_hash
+
+# Setup temporary SQLite DB path
+db_fd, db_path = tempfile.mkstemp(prefix="test_async", suffix=".db")
+os.close(db_fd)
+os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+os.environ["ASYNC_DATABASE_URL"] = f"sqlite+aiosqlite:///{db_path}"
+os.environ.setdefault("SECRET_KEY", "test-secret")
 
 
 @pytest.fixture
@@ -74,6 +71,7 @@ def client():
             db.close()
 
     main.app.dependency_overrides[database.get_db] = override_get_db
+
     async def override_get_async_db():
         async with TestingAsyncSessionLocal() as session:
             yield session
