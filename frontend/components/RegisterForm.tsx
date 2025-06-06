@@ -21,7 +21,7 @@ export default function RegisterForm() {
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const data = await apiGet<Department[]>('/departments/public');
+        const data = await apiGet<Department[]>('/api/departments/public');
         setDepartments(data);
         setShowDepartments(true);
       } catch (err) {
