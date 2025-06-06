@@ -8,13 +8,14 @@ from fastapi import (
 from inventory_core import get_recent_logs
 from database import SessionLocal, get_db
 from sqlalchemy.orm import Session
-from auth import require_role
+from auth import require_role, ensure_tenant
 import csv
 from io import StringIO
 from models import User, AuditLog, Item
 from datetime import datetime, timedelta
 from pydantic import BaseModel, validator, conint
 from time import time
+from cache import get_cached, set_cached
 import uuid
 
 router = APIRouter(prefix="/analytics")
@@ -24,12 +25,16 @@ admin_or_manager = require_role(["admin", "manager"])
 # In-memory store for export task results
 export_tasks: dict[str, str | None] = {}
 
-# Simple in-memory cache for usage results
+# Simple in-memory cache for usage results as a fallback when Redis is unavailable
 usage_cache: dict[tuple, tuple[float, list[dict]]] = {}
 CACHE_TTL = 300  # seconds
 
 
 def _get_cached_usage(key: tuple) -> list[dict] | None:
+    cached = get_cached(str(key))
+    if cached is not None:
+        return cached
+
     entry = usage_cache.get(key)
     if entry and time() - entry[0] < CACHE_TTL:
         return entry[1]
@@ -89,6 +94,7 @@ def export_audit_csv(
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
+    ensure_tenant(user, tenant_id)
     csv_data = _build_csv(db, limit, tenant_id)
     return Response(content=csv_data, media_type="text/csv")
 
@@ -103,6 +109,7 @@ def start_audit_export(
     limit: int = 100,
     user: User = Depends(admin_or_manager),
 ):
+    ensure_tenant(user, tenant_id)
     task_id = str(uuid.uuid4())
     export_tasks[task_id] = None
     background_tasks.add_task(_generate_csv, limit, tenant_id, task_id)
@@ -158,6 +165,7 @@ def item_usage(
     )
 
     if params.tenant_id is not None:
+        ensure_tenant(user, params.tenant_id)
         query = query.filter(Item.tenant_id == params.tenant_id)
     if params.user_id is not None:
         query = query.filter(AuditLog.user_id == params.user_id)
@@ -189,6 +197,7 @@ def item_usage(
         for date, v in sorted(data.items())
     ]
     usage_cache[cache_key] = (time(), result)
+    set_cached(str(cache_key), result, CACHE_TTL)
     return result
 
 
@@ -226,6 +235,7 @@ def overall_usage(
     if params.item_name:
         query = query.join(Item).filter(Item.name == params.item_name)
     elif params.tenant_id is not None:
+        ensure_tenant(user, params.tenant_id)
         query = query.join(Item).filter(Item.tenant_id == params.tenant_id)
 
     if params.user_id is not None:
@@ -258,4 +268,5 @@ def overall_usage(
         for date, v in sorted(data.items())
     ]
     usage_cache[cache_key] = (time(), result)
+    set_cached(str(cache_key), result, CACHE_TTL)
     return result

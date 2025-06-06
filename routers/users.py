@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User
 from schemas import UserCreate, UserResponse, UserUpdate, UserDelete
-from auth import require_role, get_password_hash
+from auth import require_role, get_password_hash, ensure_tenant
 
 router = APIRouter()
 
@@ -17,6 +17,7 @@ def create_user(
     db: Session = Depends(get_db),
     user: User = Depends(admin_only),
 ):
+    ensure_tenant(user, payload.tenant_id)
     if (
         db.query(User)
         .filter(User.username == payload.username, User.tenant_id == payload.tenant_id)
@@ -42,6 +43,7 @@ def list_users(
     db: Session = Depends(get_db),
     user: User = Depends(admin_only),
 ):
+    ensure_tenant(user, tenant_id)
     return db.query(User).filter(User.tenant_id == tenant_id).all()
 
 

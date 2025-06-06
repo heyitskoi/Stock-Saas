@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 import httpx
 import inspect
+import pyotp
 
 os.environ.setdefault("SECRET_KEY", "test-secret")
 
@@ -17,6 +18,8 @@ import database_async  # noqa: E402
 import main  # noqa: E402
 from models import User, Tenant  # noqa: E402
 from auth import get_password_hash  # noqa: E402
+
+ADMIN_TOTP_SECRET = ""
 
 
 def _make_test_client(app):
@@ -54,11 +57,14 @@ def client():
             adb.add(tenant)
             await adb.commit()
             await adb.refresh(tenant)
+            global ADMIN_TOTP_SECRET
+            ADMIN_TOTP_SECRET = pyotp.random_base32()
             admin = User(
                 username="admin",
                 hashed_password=get_password_hash("admin"),
                 role="admin",
                 tenant_id=tenant.id,
+                totp_secret=ADMIN_TOTP_SECRET,
                 notification_preference="email",
             )
             adb.add(admin)
@@ -83,7 +89,9 @@ def client():
 
     with _make_test_client(main.app) as c:
         if hasattr(main.app.state, "rate_limiter"):
-            main.app.state.rate_limiter.attempts.clear()
+            asyncio.get_event_loop().run_until_complete(
+                main.app.state.rate_limiter.reset()
+            )
         yield c
 
     main.app.dependency_overrides.clear()
@@ -91,9 +99,10 @@ def client():
 
 
 def get_token(client: TestClient) -> str:
+    otp = pyotp.TOTP(ADMIN_TOTP_SECRET).now()
     resp = client.post(
         "/token",
-        data={"username": "admin", "password": "admin"},
+        data={"username": "admin", "password": "admin", "totp": otp},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     assert (

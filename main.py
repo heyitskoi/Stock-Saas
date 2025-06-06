@@ -2,7 +2,7 @@ import asyncio
 
 from config import settings
 
-from fastapi import FastAPI, HTTPException, Depends, WebSocket
+from fastapi import FastAPI, HTTPException, Depends, WebSocket, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -65,8 +65,11 @@ app = FastAPI(
 ws_manager = InventoryWSManager()
 
 # Configure CORS
-frontend_origin = settings.next_public_api_url
-origins = [frontend_origin] if frontend_origin else []
+origins_raw = settings.cors_allow_origins or settings.next_public_api_url
+if origins_raw:
+    origins = [o.strip() for o in origins_raw.split(",") if o.strip()]
+else:
+    origins = []
 if DATABASE_URL.startswith("sqlite"):
     origins = ["*"]
 
@@ -79,7 +82,12 @@ app.add_middleware(
 )
 
 # Add rate limiting middleware for sensitive endpoints
-rate_limiter = RateLimiter(limit=5, window=60, routes=["/token", "/users"])
+rate_limiter = RateLimiter(
+    limit=5,
+    window=60,
+    routes=["/token", "/users"],
+    redis_url=settings.rate_limit_redis_url,
+)
 app.state.rate_limiter = rate_limiter
 app.add_middleware(BaseHTTPMiddleware, dispatch=rate_limiter)
 
@@ -155,6 +163,7 @@ def create_default_admin():
             hashed_password=get_password_hash(password),
             role="admin",
             tenant_id=tenant.id,
+            totp_secret=pyotp.random_base32(),
             notification_preference="email",
         )
         db.add(admin)
@@ -170,345 +179,8 @@ any_user = require_role(["admin", "manager", "user"])
 @app.post("/token")
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
+    totp: str = Form(...),
     db: AsyncSession = Depends(get_async_db),
 ):
     """Authenticate a user and return a JWT access token."""
-    return await login_for_access_token(form_data, db)
-
-
-@app.post("/items/add", response_model=ItemResponse, summary="Add items to inventory")
-async def api_add_item(
-    payload: ItemCreate,
-    db: AsyncSession = Depends(get_async_db),
-    user: User = Depends(admin_or_manager),
-):
-    item = await async_add_item(
-        db,
-        payload.name,
-        payload.quantity,
-        payload.threshold,
-        payload.tenant_id,
-        payload.min_par,
-        payload.department_id,
-        payload.category_id,
-        payload.stock_code,
-        payload.status,
-        user_id=user.id,
-    )
-    asyncio.create_task(
-        ws_manager.broadcast(
-            payload.tenant_id,
-            {
-                "event": "update",
-                "item": item.name,
-                "available": item.available,
-                "in_use": item.in_use,
-                "threshold": item.threshold,
-            },
-        )
-    )
-    if item.threshold and item.available < item.threshold:
-        asyncio.create_task(
-            ws_manager.broadcast(
-                payload.tenant_id,
-                {
-                    "event": "low_stock",
-                    "item": item.name,
-                    "available": item.available,
-                    "threshold": item.threshold,
-                },
-            )
-        )
-    return item
-
-
-@app.post("/items/issue", response_model=ItemResponse, summary="Issue items to a user")
-async def api_issue_item(
-    payload: ItemCreate,
-    db: AsyncSession = Depends(get_async_db),
-    user: User = Depends(admin_or_manager),
-):
-    try:
-        item = await async_issue_item(
-            db,
-            payload.name,
-            payload.quantity,
-            tenant_id=payload.tenant_id,
-            user_id=user.id,
-        )
-        asyncio.create_task(
-            ws_manager.broadcast(
-                payload.tenant_id,
-                {
-                    "event": "update",
-                    "item": item.name,
-                    "available": item.available,
-                    "in_use": item.in_use,
-                    "threshold": item.threshold,
-                },
-            )
-        )
-        if item.threshold and item.available < item.threshold:
-            asyncio.create_task(
-                ws_manager.broadcast(
-                    payload.tenant_id,
-                    {
-                        "event": "low_stock",
-                        "item": item.name,
-                        "available": item.available,
-                        "threshold": item.threshold,
-                    },
-                )
-            )
-        return item
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.post("/items/return", response_model=ItemResponse, summary="Return issued items")
-async def api_return_item(
-    payload: ItemCreate,
-    db: AsyncSession = Depends(get_async_db),
-    user: User = Depends(admin_or_manager),
-):
-    try:
-        item = await async_return_item(
-            db,
-            payload.name,
-            payload.quantity,
-            tenant_id=payload.tenant_id,
-            user_id=user.id,
-        )
-        asyncio.create_task(
-            ws_manager.broadcast(
-                payload.tenant_id,
-                {
-                    "event": "update",
-                    "item": item.name,
-                    "available": item.available,
-                    "in_use": item.in_use,
-                    "threshold": item.threshold,
-                },
-            )
-        )
-        if item.threshold and item.available < item.threshold:
-            asyncio.create_task(
-                ws_manager.broadcast(
-                    payload.tenant_id,
-                    {
-                        "event": "low_stock",
-                        "item": item.name,
-                        "available": item.available,
-                        "threshold": item.threshold,
-                    },
-                )
-            )
-        return item
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.post(
-    "/items/transfer",
-    response_model=TransferResponse,
-    summary="Transfer stock between departments",
-)
-async def api_transfer_item(
-    payload: TransferRequest,
-    db: AsyncSession = Depends(get_async_db),
-    user: User = Depends(admin_or_manager),
-):
-    try:
-        from_item, to_item = await async_transfer_item(
-            db,
-            payload.name,
-            payload.quantity,
-            from_tenant_id=payload.from_tenant_id,
-            to_tenant_id=payload.to_tenant_id,
-            user_id=user.id,
-        )
-        transfer_payload = {
-            "event": "transfer",
-            "item": payload.name,
-            "quantity": payload.quantity,
-            "from": payload.from_tenant_id,
-            "to": payload.to_tenant_id,
-        }
-        asyncio.create_task(
-            ws_manager.broadcast(payload.from_tenant_id, transfer_payload)
-        )
-        asyncio.create_task(
-            ws_manager.broadcast(payload.to_tenant_id, transfer_payload)
-        )
-        asyncio.create_task(
-            ws_manager.broadcast(
-                payload.from_tenant_id,
-                {
-                    "event": "update",
-                    "item": from_item.name,
-                    "available": from_item.available,
-                    "in_use": from_item.in_use,
-                    "threshold": from_item.threshold,
-                },
-            )
-        )
-        asyncio.create_task(
-            ws_manager.broadcast(
-                payload.to_tenant_id,
-                {
-                    "event": "update",
-                    "item": to_item.name,
-                    "available": to_item.available,
-                    "in_use": to_item.in_use,
-                    "threshold": to_item.threshold,
-                },
-            )
-        )
-        if from_item.threshold and from_item.available < from_item.threshold:
-            asyncio.create_task(
-                ws_manager.broadcast(
-                    payload.from_tenant_id,
-                    {
-                        "event": "low_stock",
-                        "item": from_item.name,
-                        "available": from_item.available,
-                        "threshold": from_item.threshold,
-                    },
-                )
-            )
-        if to_item.threshold and to_item.available < to_item.threshold:
-            asyncio.create_task(
-                ws_manager.broadcast(
-                    payload.to_tenant_id,
-                    {
-                        "event": "low_stock",
-                        "item": to_item.name,
-                        "available": to_item.available,
-                        "threshold": to_item.threshold,
-                    },
-                )
-            )
-        return {"from_item": from_item, "to_item": to_item}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.get("/items/status")
-def api_get_status(
-    tenant_id: int,
-    name: str | None = None,
-    db: Session = Depends(get_db),
-    user: User = Depends(any_user),
-):
-    data = get_status(db, tenant_id=tenant_id, name=name)
-    if not data:
-        raise HTTPException(
-            status_code=404,
-            detail="Item not found" if name else "No items found",
-        )
-    return data
-
-
-@app.get(
-    "/audit/logs",
-    response_model=list[AuditLogResponse],
-    summary="Get recent audit log entries",
-)
-def api_get_audit_logs(
-    tenant_id: int,
-    limit: int = 10,
-    db: Session = Depends(get_db),
-    user: User = Depends(admin_or_manager),
-):
-    return get_recent_logs(db, limit, tenant_id)
-
-
-@app.get(
-    "/items/history",
-    response_model=list[AuditLogResponse],
-    summary="Get audit log history for an item",
-)
-def api_item_history(
-    tenant_id: int,
-    name: str,
-    limit: int = 100,
-    db: Session = Depends(get_db),
-    user: User = Depends(admin_or_manager),
-):
-    return get_item_history(db, name, tenant_id, limit)
-
-
-@app.put("/items/update", response_model=ItemResponse, summary="Update an item")
-async def api_update_item(
-    payload: ItemUpdate,
-    db: AsyncSession = Depends(get_async_db),
-    user: User = Depends(admin_or_manager),
-):
-    try:
-        item = await async_update_item(
-            db,
-            payload.name,
-            tenant_id=payload.tenant_id,
-            new_name=payload.new_name,
-            threshold=payload.threshold,
-            min_par=payload.min_par,
-            department_id=payload.department_id,
-            category_id=payload.category_id,
-            stock_code=payload.stock_code,
-            status=payload.status,
-            user_id=user.id,
-        )
-        asyncio.create_task(
-            ws_manager.broadcast(
-                payload.tenant_id,
-                {
-                    "event": "update",
-                    "item": item.name,
-                    "available": item.available,
-                    "in_use": item.in_use,
-                    "threshold": item.threshold,
-                },
-            )
-        )
-        if item.threshold and item.available < item.threshold:
-            asyncio.create_task(
-                ws_manager.broadcast(
-                    payload.tenant_id,
-                    {
-                        "event": "low_stock",
-                        "item": item.name,
-                        "available": item.available,
-                        "threshold": item.threshold,
-                    },
-                )
-            )
-        return item
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-
-@app.delete("/items/delete", summary="Delete an item")
-async def api_delete_item(
-    payload: ItemDelete,
-    db: AsyncSession = Depends(get_async_db),
-    user: User = Depends(admin_or_manager),
-):
-    try:
-        await async_delete_item(
-            db,
-            payload.name,
-            tenant_id=payload.tenant_id,
-            user_id=user.id,
-        )
-        asyncio.create_task(
-            ws_manager.broadcast(
-                payload.tenant_id,
-                {
-                    "event": "delete",
-                    "item": payload.name,
-                },
-            )
-        )
-        return {"detail": "Item deleted"}
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    return await login_for_access_token(form_data, totp, db)
