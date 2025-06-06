@@ -6,7 +6,8 @@ const config = {
     command: 'npm run build && npx next start -p 3000',
     port: 3000,
     reuseExistingServer: true,
-    timeout: 120 * 1000,
+    // Build can take a while on fresh installs, so allow up to 5 minutes
+    timeout: 300 * 1000,
   },
   use: {
     baseURL: 'http://localhost:3000',
