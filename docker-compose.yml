@@ -12,7 +12,7 @@ services:
     build: .
     container_name: backend
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-stock}:${POSTGRES_PASSWORD:-stock}@db:5432/${POSTGRES_DB:-stockdb}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-stock}:${POSTGRES_PASSWORD:-stock}@db:5432/${POSTGRES_DB:-stockdb}
       SECRET_KEY: ${SECRET_KEY}
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: admin
@@ -26,7 +26,7 @@ services:
     build: .
     command: celery -A tasks worker --loglevel=info
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-stock}:${POSTGRES_PASSWORD:-stock}@db:5432/${POSTGRES_DB:-stockdb}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-stock}:${POSTGRES_PASSWORD:-stock}@db:5432/${POSTGRES_DB:-stockdb}
       CELERY_BROKER_URL: redis://redis:6379/0
     depends_on:
       - db
@@ -35,7 +35,7 @@ services:
     build: .
     command: celery -A tasks beat --loglevel=info
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-stock}:${POSTGRES_PASSWORD:-stock}@db:5432/${POSTGRES_DB:-stockdb}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-stock}:${POSTGRES_PASSWORD:-stock}@db:5432/${POSTGRES_DB:-stockdb}
       CELERY_BROKER_URL: redis://redis:6379/0
     depends_on:
       - db
