@@ -49,11 +49,10 @@ export const apiGet = <T>(path: string, options?: ApiFetchOptions) =>
 export const apiPost = <T>(path: string, body?: any, options?: ApiFetchOptions) =>
   apiFetch<T>(path, { method: 'POST', body, ...(options || {}) });
 
-export async function login(username: string, password: string, totp: string) {
+export async function login(username: string, password: string) {
   const body = new URLSearchParams();
   body.set('username', username);
   body.set('password', password);
-  body.set('totp', totp);
   const res = await apiPost<{ access_token: string }>('/token', body);
   return res.access_token;
 }

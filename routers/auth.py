@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 import secrets
-import pyotp
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -35,19 +34,17 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         db.refresh(tenant)
 
     role = "admin" if payload.is_admin else "user"
-    secret = pyotp.random_base32()
     user = User(
         username=payload.email,
         hashed_password=get_password_hash(payload.password),
         role=role,
         tenant_id=tenant.id,
-        totp_secret=secret,
         notification_preference="email",
     )
     db.add(user)
     db.commit()
     db.refresh(user)
-    return RegisterResponse(user=user, totp_secret=secret)
+    return RegisterResponse(user=user)
 
 
 @router.post("/request-reset")

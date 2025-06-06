@@ -19,6 +19,6 @@ This document highlights major milestones for the inventory SaaS platform.
 - Extended integration tests and data factories
 
 ## Planned
-- Two-factor authentication and password reset
+- Password reset
 - Additional performance tuning and async optimisations
 - More notification options (email/Slack)

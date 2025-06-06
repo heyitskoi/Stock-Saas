@@ -68,7 +68,6 @@ class User(Base):
     hashed_password = Column(String)
     role = Column(String, default="user")
     tenant_id = Column(Integer, ForeignKey("tenants.id"))
-    totp_secret = Column(String, nullable=False)
     # "email", "slack" or "none"
     notification_preference = Column(String, default="email")
 

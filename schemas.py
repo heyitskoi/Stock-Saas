@@ -177,4 +177,3 @@ class RegisterRequest(BaseModel):
 
 class RegisterResponse(BaseModel):
     user: UserResponse
-    totp_secret: str

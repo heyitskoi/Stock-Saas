@@ -3,9 +3,8 @@ from typing import Optional
 
 from config import settings
 
-from fastapi import Depends, HTTPException, status, Form
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-import pyotp
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -89,14 +88,11 @@ def ensure_tenant(user: User, tenant_id: int) -> None:
 
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    totp: str = Form(...),
     db: AsyncSession = Depends(get_async_db),
 ):
     user = await authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
-    if not pyotp.TOTP(user.totp_secret).verify(totp):
-        raise HTTPException(status_code=400, detail="Invalid two-factor code")
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
