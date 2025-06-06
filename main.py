@@ -13,18 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import Base, engine, get_db, SessionLocal, DATABASE_URL
 from database_async import get_async_db
 from inventory_core import (
-    add_item,
-    issue_item,
-    return_item,
     get_status,
     get_recent_logs,
-    update_item,
-    delete_item,
     async_add_item,
     async_issue_item,
     async_return_item,
-    async_get_status,
-    async_get_recent_logs,
     async_update_item,
     async_delete_item,
 )

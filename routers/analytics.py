@@ -76,7 +76,11 @@ def _generate_csv(limit: int, tenant_id: int, task_id: str) -> None:
         db.close()
 
 
-@router.get("/audit/export", response_class=Response, summary="Export audit log CSV immediately")
+@router.get(
+    "/audit/export",
+    response_class=Response,
+    summary="Export audit log CSV immediately",
+)
 def export_audit_csv(
     tenant_id: int,
     limit: int = 100,
@@ -87,7 +91,10 @@ def export_audit_csv(
     return Response(content=csv_data, media_type="text/csv")
 
 
-@router.post("/audit/export", summary="Start async audit log CSV export")
+@router.post(
+    "/audit/export",
+    summary="Start async audit log CSV export",
+)
 def start_audit_export(
     background_tasks: BackgroundTasks,
     tenant_id: int,
@@ -100,7 +107,11 @@ def start_audit_export(
     return {"task_id": task_id}
 
 
-@router.get("/audit/export/{task_id}", response_class=Response, summary="Download generated audit log CSV")
+@router.get(
+    "/audit/export/{task_id}",
+    response_class=Response,
+    summary="Download generated audit log CSV",
+)
 def get_exported_csv(
     task_id: str,
     user: User = Depends(admin_or_manager),
@@ -113,7 +124,10 @@ def get_exported_csv(
     return Response(content=csv_data, media_type="text/csv")
 
 
-@router.get("/usage/{item_name}", summary="Aggregate issued/returned quantities for a single item")
+@router.get(
+    "/usage/{item_name}",
+    summary="Aggregate issued/returned quantities for a single item",
+)
 def item_usage(
     item_name: str,
     params: UsageParams = Depends(),
@@ -122,7 +136,10 @@ def item_usage(
 ):
     if params.start_date and params.end_date:
         if params.start_date > params.end_date:
-            raise HTTPException(status_code=400, detail="start_date must be before end_date")
+            raise HTTPException(
+                status_code=400,
+                detail="start_date must be before end_date",
+            )
         since = params.start_date
         until = params.end_date
     else:
@@ -161,12 +178,18 @@ def item_usage(
         else:
             entry["returned"] += log.quantity
 
-    result = [{"date": date, "issued": v["issued"], "returned": v["returned"]} for date, v in sorted(data.items())]
+    result = [
+        {"date": date, "issued": v["issued"], "returned": v["returned"]}
+        for date, v in sorted(data.items())
+    ]
     usage_cache[cache_key] = (time(), result)
     return result
 
 
-@router.get("/usage", summary="Aggregate issued/returned usage across all items")
+@router.get(
+    "/usage",
+    summary="Aggregate issued/returned usage across all items",
+)
 def overall_usage(
     params: UsageParams = Depends(),
     db: Session = Depends(get_db),
@@ -174,7 +197,10 @@ def overall_usage(
 ):
     if params.start_date and params.end_date:
         if params.start_date > params.end_date:
-            raise HTTPException(status_code=400, detail="start_date must be before end_date")
+            raise HTTPException(
+                status_code=400,
+                detail="start_date must be before end_date",
+            )
         since = params.start_date
         until = params.end_date
     else:
@@ -213,6 +239,9 @@ def overall_usage(
         else:
             entry["returned"] += log.quantity
 
-    result = [{"date": date, "issued": v["issued"], "returned": v["returned"]} for date, v in sorted(data.items())]
+    result = [
+        {"date": date, "issued": v["issued"], "returned": v["returned"]}
+        for date, v in sorted(data.items())
+    ]
     usage_cache[cache_key] = (time(), result)
     return result

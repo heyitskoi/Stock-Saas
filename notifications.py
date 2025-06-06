@@ -52,7 +52,10 @@ def check_thresholds(
 
     users = db.query(User).all()
     for item in low_items:
-        text = f"Item '{item.name}' is below threshold: {item.available} < {item.threshold}"
+        text = (
+            f"Item '{item.name}' is below threshold: {item.available} < "
+            f"{item.threshold}"
+        )
         if users:
             for u in users:
                 if u.notification_preference == "email" and email_func:

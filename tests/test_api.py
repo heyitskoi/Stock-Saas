@@ -41,7 +41,11 @@ def test_multi_tenant_isolation(client):
         headers=h2,
     )
 
-    resp1 = client.get("/items/status", params={"name": "widget", "tenant_id": 1}, headers=h1)
+    resp1 = client.get(
+        "/items/status",
+        params={"name": "widget", "tenant_id": 1},
+        headers=h1,
+    )
     resp2 = client.get(
         "/items/status",
         params={"name": "widget", "tenant_id": tenant2.id},
@@ -113,7 +117,7 @@ def test_create_user_duplicate_username(client):
 def test_update_user_duplicate_username(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
-    u1 = client.post(
+    _ = client.post(
         "/users/",
         json={
             "username": "user1",

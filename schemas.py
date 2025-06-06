@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, conint, root_validator
+from pydantic import BaseModel, conint
 
 
 class ItemBase(BaseModel):

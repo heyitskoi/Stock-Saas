@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Union
+from typing import Dict, Optional, List
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
