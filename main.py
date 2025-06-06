@@ -10,6 +10,7 @@ from starlette.websockets import WebSocketDisconnect
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+import pyotp
 from jose import JWTError, jwt
 
 from database import Base, engine, get_db, SessionLocal, DATABASE_URL
