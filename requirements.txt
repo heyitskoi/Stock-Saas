@@ -14,3 +14,4 @@ flake8==7.2.0
 celery
 alembic
 python-dotenv
+pytest
