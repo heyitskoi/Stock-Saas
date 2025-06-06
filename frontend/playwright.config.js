@@ -3,7 +3,7 @@ const config = {
   testDir: './tests',
   timeout: 30000,
   webServer: {
-    command: 'npm run build && npx next start -p 3000',
+    command: 'npm run dev -- -p 3000',
     port: 3000,
     reuseExistingServer: true,
   },
