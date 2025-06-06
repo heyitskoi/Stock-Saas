@@ -223,6 +223,18 @@ After logging in you will see the dashboard listing all items. Links are provide
 
 Admins can also open `/users` to manage accounts. The page lists existing users and includes a form to create new ones.
 
+### Frontend tests
+
+Playwright powers browser tests located in `frontend/tests`. Before running
+`npx playwright test`, download the browser binaries:
+
+```bash
+cd frontend
+npx playwright install
+```
+
+You can also run `./scripts/install_browsers.sh` inside `frontend/` to automate
+this step.
 
 
 ## Running with Docker
