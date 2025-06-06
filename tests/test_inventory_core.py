@@ -55,6 +55,17 @@ def test_issue_insufficient_stock(db):
         issue_item(session, "laptop", 2, tenant_id=tenant_id)
 
 
+def test_negative_quantity(db):
+    session, tenant_id = db
+    with pytest.raises(ValueError):
+        add_item(session, "bad", -1, threshold=0, tenant_id=tenant_id)
+    add_item(session, "good", 1, threshold=0, tenant_id=tenant_id)
+    with pytest.raises(ValueError):
+        issue_item(session, "good", -2, tenant_id=tenant_id)
+    with pytest.raises(ValueError):
+        return_item(session, "good", -1, tenant_id=tenant_id)
+
+
 def test_update_and_delete(db):
     session, tenant_id = db
     add_item(session, "phone", 2, threshold=1, tenant_id=tenant_id)

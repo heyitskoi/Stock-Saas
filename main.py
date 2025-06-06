@@ -38,6 +38,7 @@ from schemas import (
 )
 from routers.users import router as users_router
 from routers.analytics import router as analytics_router
+from routers.auth import router as auth_router
 from websocket_manager import InventoryWSManager
 from rate_limiter import RateLimiter
 
@@ -77,6 +78,7 @@ app.add_middleware(BaseHTTPMiddleware, dispatch=rate_limiter)
 Base.metadata.create_all(bind=engine)
 app.include_router(users_router)
 app.include_router(analytics_router)
+app.include_router(auth_router)
 
 
 @app.websocket("/ws/inventory/{tenant_id}")
