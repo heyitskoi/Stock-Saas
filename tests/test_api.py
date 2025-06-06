@@ -1,3 +1,6 @@
+from tests.conftest import get_token
+
+
 def test_multi_tenant_isolation(client):
     from tests.factories import _session
     from models import Tenant, User
