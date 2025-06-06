@@ -36,9 +36,7 @@ def add_item(
         raise ValueError("Quantity must be positive")
     if threshold < 0:
         raise ValueError("Threshold cannot be negative")
-    item = db.query(Item).filter(
-        Item.name == name, Item.tenant_id == tenant_id
-    ).first()
+    item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item:
         item = Item(
             name=name,
@@ -84,9 +82,7 @@ def issue_item(
 ) -> Item:
     if qty <= 0:
         raise ValueError("Quantity must be positive")
-    item = db.query(Item).filter(
-        Item.name == name, Item.tenant_id == tenant_id
-    ).first()
+    item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item or item.available < qty:
         raise ValueError("Not enough stock to issue")
 
@@ -108,9 +104,7 @@ def return_item(
 ) -> Item:
     if qty <= 0:
         raise ValueError("Quantity must be positive")
-    item = db.query(Item).filter(
-        Item.name == name, Item.tenant_id == tenant_id
-    ).first()
+    item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item or item.in_use < qty:
         raise ValueError("Invalid return quantity")
 
@@ -172,9 +166,7 @@ def get_item_history(
     db: Session, name: str, tenant_id: int, limit: int = 100
 ) -> List[AuditLog]:
     """Return audit log entries for a specific item."""
-    item = db.query(Item).filter(
-        Item.name == name, Item.tenant_id == tenant_id
-    ).first()
+    item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item:
         return []
     return (
@@ -200,9 +192,7 @@ def update_item(
     user_id: Optional[int] = None,
 ) -> Item:
     """Update an item's name and/or threshold."""
-    item = db.query(Item).filter(
-        Item.name == name, Item.tenant_id == tenant_id
-    ).first()
+    item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item:
         raise ValueError("Item not found")
 
@@ -237,9 +227,7 @@ def delete_item(
     user_id: Optional[int] = None,
 ) -> None:
     """Delete an item."""
-    item = db.query(Item).filter(
-        Item.name == name, Item.tenant_id == tenant_id
-    ).first()
+    item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
     if not item:
         raise ValueError("Item not found")
 
@@ -260,15 +248,17 @@ def transfer_item(
     if qty <= 0:
         raise ValueError("Quantity must be positive")
 
-    from_item = db.query(Item).filter(
-        Item.name == name, Item.tenant_id == from_tenant_id
-    ).first()
+    from_item = (
+        db.query(Item)
+        .filter(Item.name == name, Item.tenant_id == from_tenant_id)
+        .first()
+    )
     if not from_item or from_item.available < qty:
         raise ValueError("Not enough stock to transfer")
 
-    to_item = db.query(Item).filter(
-        Item.name == name, Item.tenant_id == to_tenant_id
-    ).first()
+    to_item = (
+        db.query(Item).filter(Item.name == name, Item.tenant_id == to_tenant_id).first()
+    )
     if not to_item:
         to_item = Item(
             name=name,
@@ -294,6 +284,19 @@ def transfer_item(
     return from_item, to_item
 
 
+async def _async_log_action(
+    db: AsyncSession, user_id: Optional[int], item: Item, action: str, quantity: int
+):
+    log = AuditLog(
+        user_id=user_id,
+        item_id=item.id,
+        action=action,
+        quantity=quantity,
+        timestamp=datetime.utcnow(),
+    )
+    db.add(log)
+
+
 async def async_add_item(
     db: AsyncSession,
     name: str,
@@ -314,9 +317,7 @@ async def async_add_item(
         raise ValueError("Threshold cannot be negative")
 
     result = await db.execute(
-        select(Item).where(
-            and_(Item.name == name, Item.tenant_id == tenant_id)
-        )
+        select(Item).where(and_(Item.name == name, Item.tenant_id == tenant_id))
     )
     item = result.scalars().first()
 
@@ -368,9 +369,7 @@ async def async_issue_item(
         raise ValueError("Quantity must be positive")
 
     result = await db.execute(
-        select(Item).where(
-            and_(Item.name == name, Item.tenant_id == tenant_id)
-        )
+        select(Item).where(and_(Item.name == name, Item.tenant_id == tenant_id))
     )
     item = result.scalars().first()
 
@@ -398,9 +397,7 @@ async def async_return_item(
         raise ValueError("Quantity must be positive")
 
     result = await db.execute(
-        select(Item).where(
-            and_(Item.name == name, Item.tenant_id == tenant_id)
-        )
+        select(Item).where(and_(Item.name == name, Item.tenant_id == tenant_id))
     )
     item = result.scalars().first()
 
@@ -460,9 +457,7 @@ async def async_get_item_history(
 ) -> List[AuditLog]:
     """Get audit log history for an item."""
     result = await db.execute(
-        select(Item).where(
-            and_(Item.name == name, Item.tenant_id == tenant_id)
-        )
+        select(Item).where(and_(Item.name == name, Item.tenant_id == tenant_id))
     )
     item = result.scalars().first()
     if not item:
@@ -493,9 +488,7 @@ async def async_update_item(
 ) -> Item:
     """Update an item's properties."""
     result = await db.execute(
-        select(Item).where(
-            and_(Item.name == name, Item.tenant_id == tenant_id)
-        )
+        select(Item).where(and_(Item.name == name, Item.tenant_id == tenant_id))
     )
     item = result.scalars().first()
     if not item:
@@ -533,9 +526,7 @@ async def async_delete_item(
 ) -> None:
     """Delete an item."""
     result = await db.execute(
-        select(Item).where(
-            and_(Item.name == name, Item.tenant_id == tenant_id)
-        )
+        select(Item).where(and_(Item.name == name, Item.tenant_id == tenant_id))
     )
     item = result.scalars().first()
     if not item:
@@ -559,18 +550,14 @@ async def async_transfer_item(
         raise ValueError("Quantity must be positive")
 
     result = await db.execute(
-        select(Item).where(
-            and_(Item.name == name, Item.tenant_id == from_tenant_id)
-        )
+        select(Item).where(and_(Item.name == name, Item.tenant_id == from_tenant_id))
     )
     from_item = result.scalars().first()
     if not from_item or from_item.available < qty:
         raise ValueError("Not enough stock to transfer")
 
     result = await db.execute(
-        select(Item).where(
-            and_(Item.name == name, Item.tenant_id == to_tenant_id)
-        )
+        select(Item).where(and_(Item.name == name, Item.tenant_id == to_tenant_id))
     )
     to_item = result.scalars().first()
     if not to_item:

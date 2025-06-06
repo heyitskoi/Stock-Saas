@@ -6,6 +6,16 @@ import pytest
 import inspect
 import pyotp
 import tests.conftest as conf
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from database import Base, get_db
+from main import app
+import asyncio
+from typing import AsyncGenerator, Generator
+import json
+from models import User, Item, Tenant
+from datetime import datetime, timedelta
 
 # Setup temporary SQLite DB path
 db_fd, db_path = tempfile.mkstemp(prefix="test_async", suffix=".db")
@@ -14,14 +24,10 @@ os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 os.environ["ASYNC_DATABASE_URL"] = f"sqlite+aiosqlite:///{db_path}"
 os.environ.setdefault("SECRET_KEY", "test-secret")
 
-from sqlalchemy import create_engine  # noqa: E402
-from sqlalchemy.orm import sessionmaker  # noqa: E402
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker  # noqa: E402
-import asyncio  # noqa: E402
 import database_async  # noqa: E402
 import database  # noqa: E402
 import main  # noqa: E402
-from models import User, Tenant  # noqa: E402
 from auth import get_password_hash  # noqa: E402
 
 
@@ -40,12 +46,8 @@ def client():
     )
     TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
-    async_engine = create_async_engine(
-        f"sqlite+aiosqlite:///{tmp.name}", future=True
-    )
-    TestingAsyncSessionLocal = async_sessionmaker(
-        async_engine, expire_on_commit=False
-    )
+    async_engine = create_async_engine(f"sqlite+aiosqlite:///{tmp.name}", future=True)
+    TestingAsyncSessionLocal = async_sessionmaker(async_engine, expire_on_commit=False)
 
     # Patch database and main modules to use in-memory DB
     database.engine = engine
@@ -178,10 +180,11 @@ def test_websocket_transfer_notification(client):
     assert dest_token_resp.status_code == 200
     dest_token = dest_token_resp.json()["access_token"]
 
-    with client.websocket_connect(f"/ws/inventory/1?token={token}") as ws1, \
-         client.websocket_connect(
-             f"/ws/inventory/{dest.id}?token={dest_token}"
-         ) as ws2:
+    with client.websocket_connect(
+        f"/ws/inventory/1?token={token}"
+    ) as ws1, client.websocket_connect(
+        f"/ws/inventory/{dest.id}?token={dest_token}"
+    ) as ws2:
         resp = client.post(
             "/items/transfer",
             json={
@@ -202,3 +205,378 @@ def test_websocket_transfer_notification(client):
 def teardown_module(module):
     if os.path.exists(db_path):
         os.remove(db_path)
+
+
+@pytest.fixture(scope="function")
+def db() -> Generator:
+    Base.metadata.create_all(bind=engine)
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+        Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(scope="function")
+async def async_db() -> AsyncGenerator:
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    async with TestingAsyncSessionLocal() as session:
+        yield session
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+
+@pytest.fixture(scope="function")
+def client(db) -> Generator:
+    def override_get_db():
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function")
+def test_user(db):
+    # Create a test tenant
+    tenant = Tenant(name="Test Tenant")
+    db.add(tenant)
+    db.commit()
+    db.refresh(tenant)
+
+    # Create a test user
+    user = User(
+        email="test@example.com",
+        hashed_password="hashed_password",
+        tenant_id=tenant.id,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@pytest.fixture(scope="function")
+def test_item(db, test_user):
+    item = Item(
+        name="Test Item",
+        available=10,
+        in_use=0,
+        threshold=5,
+        tenant_id=test_user.tenant_id,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def test_websocket_connection(client):
+    with client.websocket_connect("/ws") as websocket:
+        data = websocket.receive_json()
+        assert data["type"] == "connection_established"
+
+
+def test_websocket_item_update(client, test_user, test_item):
+    # First, connect to the websocket
+    with client.websocket_connect("/ws") as websocket:
+        # Receive the connection established message
+        data = websocket.receive_json()
+        assert data["type"] == "connection_established"
+
+        # Update the item
+        response = client.put(
+            f"/items/{test_item.id}",
+            json={"name": "Updated Item", "threshold": 10},
+            headers={"Authorization": f"Bearer {test_user.id}"},
+        )
+        assert response.status_code == 200
+
+        # Receive the update message
+        data = websocket.receive_json()
+        assert data["type"] == "item_updated"
+        assert data["item"]["name"] == "Updated Item"
+        assert data["item"]["threshold"] == 10
+
+
+def test_websocket_item_delete(client, test_user, test_item):
+    with client.websocket_connect("/ws") as websocket:
+        # Receive the connection established message
+        data = websocket.receive_json()
+        assert data["type"] == "connection_established"
+
+        # Delete the item
+        response = client.delete(
+            f"/items/{test_item.id}",
+            headers={"Authorization": f"Bearer {test_user.id}"},
+        )
+        assert response.status_code == 204
+
+        # Receive the delete message
+        data = websocket.receive_json()
+        assert data["type"] == "item_deleted"
+        assert data["item_id"] == test_item.id
+
+
+def test_websocket_item_create(client, test_user):
+    with client.websocket_connect("/ws") as websocket:
+        # Receive the connection established message
+        data = websocket.receive_json()
+        assert data["type"] == "connection_established"
+
+        # Create a new item
+        response = client.post(
+            "/items/",
+            json={
+                "name": "New Item",
+                "qty": 10,
+                "threshold": 5,
+                "min_par": 0,
+            },
+            headers={"Authorization": f"Bearer {test_user.id}"},
+        )
+        assert response.status_code == 200
+
+        # Receive the create message
+        data = websocket.receive_json()
+        assert data["type"] == "item_created"
+        assert data["item"]["name"] == "New Item"
+        assert data["item"]["available"] == 10
+        assert data["item"]["threshold"] == 5
+
+
+def test_websocket_multiple_clients(client, test_user, test_item):
+    # Connect two clients
+    with client.websocket_connect("/ws") as websocket1:
+        with client.websocket_connect("/ws") as websocket2:
+            # Both clients should receive connection established
+            data1 = websocket1.receive_json()
+            data2 = websocket2.receive_json()
+            assert data1["type"] == "connection_established"
+            assert data2["type"] == "connection_established"
+
+            # Update the item
+            response = client.put(
+                f"/items/{test_item.id}",
+                json={"name": "Updated Item", "threshold": 10},
+                headers={"Authorization": f"Bearer {test_user.id}"},
+            )
+            assert response.status_code == 200
+
+            # Both clients should receive the update
+            data1 = websocket1.receive_json()
+            data2 = websocket2.receive_json()
+            assert data1["type"] == "item_updated"
+            assert data2["type"] == "item_updated"
+            assert data1["item"]["name"] == "Updated Item"
+            assert data2["item"]["name"] == "Updated Item"
+
+
+def test_websocket_tenant_isolation(client, test_user, test_item):
+    # Create a second tenant and user
+    tenant2 = Tenant(name="Test Tenant 2")
+    db = next(get_db())
+    db.add(tenant2)
+    db.commit()
+    db.refresh(tenant2)
+
+    user2 = User(
+        email="test2@example.com",
+        hashed_password="hashed_password",
+        tenant_id=tenant2.id,
+    )
+    db.add(user2)
+    db.commit()
+    db.refresh(user2)
+
+    # Connect two clients with different users
+    with client.websocket_connect("/ws") as websocket1:
+        with client.websocket_connect("/ws") as websocket2:
+            # Both clients should receive connection established
+            data1 = websocket1.receive_json()
+            data2 = websocket2.receive_json()
+            assert data1["type"] == "connection_established"
+            assert data2["type"] == "connection_established"
+
+            # Update the item (which belongs to tenant1)
+            response = client.put(
+                f"/items/{test_item.id}",
+                json={"name": "Updated Item", "threshold": 10},
+                headers={"Authorization": f"Bearer {test_user.id}"},
+            )
+            assert response.status_code == 200
+
+            # Only the client from tenant1 should receive the update
+            data1 = websocket1.receive_json()
+            assert data1["type"] == "item_updated"
+            assert data1["item"]["name"] == "Updated Item"
+
+            # The second client should not receive any messages
+            with pytest.raises(Exception):
+                websocket2.receive_json(timeout=1)
+
+
+def test_websocket_reconnection(client, test_user, test_item):
+    # First connection
+    with client.websocket_connect("/ws") as websocket1:
+        data = websocket1.receive_json()
+        assert data["type"] == "connection_established"
+
+        # Update the item
+        response = client.put(
+            f"/items/{test_item.id}",
+            json={"name": "Updated Item", "threshold": 10},
+            headers={"Authorization": f"Bearer {test_user.id}"},
+        )
+        assert response.status_code == 200
+
+        # Receive the update
+        data = websocket1.receive_json()
+        assert data["type"] == "item_updated"
+        assert data["item"]["name"] == "Updated Item"
+
+    # Second connection
+    with client.websocket_connect("/ws") as websocket2:
+        data = websocket2.receive_json()
+        assert data["type"] == "connection_established"
+
+        # Update the item again
+        response = client.put(
+            f"/items/{test_item.id}",
+            json={"name": "Updated Item 2", "threshold": 15},
+            headers={"Authorization": f"Bearer {test_user.id}"},
+        )
+        assert response.status_code == 200
+
+        # Receive the update
+        data = websocket2.receive_json()
+        assert data["type"] == "item_updated"
+        assert data["item"]["name"] == "Updated Item 2"
+        assert data["item"]["threshold"] == 15
+
+
+def test_websocket_invalid_token(client):
+    with pytest.raises(Exception):
+        with client.websocket_connect("/ws?token=invalid_token") as websocket:
+            websocket.receive_json()
+
+
+def test_websocket_missing_token(client):
+    with pytest.raises(Exception):
+        with client.websocket_connect("/ws") as websocket:
+            websocket.receive_json()
+
+
+def test_websocket_connection_limit(client, test_user):
+    # Try to connect more than the maximum allowed connections
+    connections = []
+    for _ in range(11):  # Assuming max_connections is 10
+        try:
+            websocket = client.websocket_connect("/ws")
+            connections.append(websocket)
+        except Exception as e:
+            if len(connections) == 10:
+                # The 11th connection should fail
+                assert "Connection limit exceeded" in str(e)
+            else:
+                raise e
+
+    # Clean up connections
+    for websocket in connections:
+        websocket.close()
+
+
+def test_websocket_heartbeat(client, test_user):
+    with client.websocket_connect("/ws") as websocket:
+        # Receive the connection established message
+        data = websocket.receive_json()
+        assert data["type"] == "connection_established"
+
+        # Send a heartbeat message
+        websocket.send_json({"type": "heartbeat"})
+
+        # Should receive a heartbeat response
+        data = websocket.receive_json()
+        assert data["type"] == "heartbeat_response"
+
+
+def test_websocket_invalid_message(client, test_user):
+    with client.websocket_connect("/ws") as websocket:
+        # Receive the connection established message
+        data = websocket.receive_json()
+        assert data["type"] == "connection_established"
+
+        # Send an invalid message
+        websocket.send_json({"type": "invalid_type"})
+
+        # Should receive an error message
+        data = websocket.receive_json()
+        assert data["type"] == "error"
+        assert "Invalid message type" in data["detail"]
+
+
+def test_websocket_connection_timeout(client, test_user):
+    with client.websocket_connect("/ws") as websocket:
+        # Receive the connection established message
+        data = websocket.receive_json()
+        assert data["type"] == "connection_established"
+
+        # Wait for longer than the timeout period
+        time.sleep(65)  # Assuming timeout is 60 seconds
+
+        # Try to send a message
+        with pytest.raises(Exception):
+            websocket.send_json({"type": "heartbeat"})
+
+
+def test_websocket_broadcast_to_all_tenants(client, test_user, test_item):
+    # Create a second tenant and user
+    tenant2 = Tenant(name="Test Tenant 2")
+    db = next(get_db())
+    db.add(tenant2)
+    db.commit()
+    db.refresh(tenant2)
+
+    user2 = User(
+        email="test2@example.com",
+        hashed_password="hashed_password",
+        tenant_id=tenant2.id,
+    )
+    db.add(user2)
+    db.commit()
+    db.refresh(user2)
+
+    # Connect two clients with different users
+    with client.websocket_connect("/ws") as websocket1:
+        with client.websocket_connect("/ws") as websocket2:
+            # Both clients should receive connection established
+            data1 = websocket1.receive_json()
+            data2 = websocket2.receive_json()
+            assert data1["type"] == "connection_established"
+            assert data2["type"] == "connection_established"
+
+            # Update the item with broadcast flag
+            response = client.put(
+                f"/items/{test_item.id}",
+                json={
+                    "name": "Updated Item",
+                    "threshold": 10,
+                    "broadcast_to_all_tenants": True,
+                },
+                headers={"Authorization": f"Bearer {test_user.id}"},
+            )
+            assert response.status_code == 200
+
+            # Both clients should receive the update
+            data1 = websocket1.receive_json()
+            data2 = websocket2.receive_json()
+            assert data1["type"] == "item_updated"
+            assert data2["type"] == "item_updated"
+            assert data1["item"]["name"] == "Updated Item"
+            assert data2["item"]["name"] == "Updated Item"

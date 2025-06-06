@@ -16,9 +16,7 @@ class RateLimiter:
         self.window = window
         self.routes = list(routes)
         self.redis_url = redis_url
-        self._memory_store = (
-            defaultdict(list) if redis_url == "memory://" else None
-        )
+        self._memory_store = defaultdict(list) if redis_url == "memory://" else None
 
     async def __call__(self, request: Request, call_next):
         if any(request.url.path.startswith(route) for route in self.routes):
