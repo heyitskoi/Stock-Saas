@@ -403,3 +403,117 @@ def test_user_route_rate_limiting(client):
 
     blocked = client.get("/users/", params={"tenant_id": 1}, headers=headers)
     assert blocked.status_code == 429
+
+
+def test_update_item_not_found(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = client.put(
+        "/items/update",
+        json={"name": "ghost", "tenant_id": 1, "new_name": "phantom"},
+        headers=headers,
+    )
+    assert resp.status_code == 404
+
+
+def test_delete_item_not_found(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = client.request(
+        "DELETE",
+        "/items/delete",
+        json={"name": "ghost", "tenant_id": 1},
+        headers=headers,
+    )
+    assert resp.status_code == 404
+
+
+def test_create_user_duplicate_username(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = {
+        "username": "dup",
+        "password": "x",
+        "role": "user",
+        "tenant_id": 1,
+        "notification_preference": "email",
+    }
+    first = client.post("/users/", json=payload, headers=headers)
+    assert first.status_code == 200
+    second = client.post("/users/", json=payload, headers=headers)
+    assert second.status_code == 400
+
+
+def test_update_user_duplicate_username(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    u1 = client.post(
+        "/users/",
+        json={
+            "username": "user1",
+            "password": "a",
+            "role": "user",
+            "tenant_id": 1,
+            "notification_preference": "email",
+        },
+        headers=headers,
+    )
+    u2 = client.post(
+        "/users/",
+        json={
+            "username": "user2",
+            "password": "a",
+            "role": "user",
+            "tenant_id": 1,
+            "notification_preference": "email",
+        },
+        headers=headers,
+    )
+    uid2 = u2.json()["id"]
+    resp = client.put(
+        "/users/update",
+        json={"id": uid2, "username": "user1"},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+
+
+def test_delete_user_not_found(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = client.request(
+        "DELETE",
+        "/users/delete",
+        json={"id": 9999},
+        headers=headers,
+    )
+    assert resp.status_code == 404
+
+
+def test_export_csv_not_found(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = client.get("/analytics/audit/export/doesnotexist", headers=headers)
+    assert resp.status_code == 404
+
+
+def test_export_csv_pending(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    from routers import analytics
+
+    # Prevent background task from completing immediately
+    original = analytics._generate_csv
+    analytics._generate_csv = lambda limit, tenant_id, task_id: None
+    try:
+        start = client.post(
+            "/analytics/audit/export",
+            params={"limit": 1, "tenant_id": 1},
+            headers=headers,
+        )
+        assert start.status_code == 200
+        task_id = start.json()["task_id"]
+        resp = client.get(f"/analytics/audit/export/{task_id}", headers=headers)
+        assert resp.status_code == 202
+    finally:
+        analytics._generate_csv = original
