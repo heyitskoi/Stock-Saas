@@ -2,8 +2,12 @@ from functools import lru_cache
 try:
     from pydantic_settings import BaseSettings  # type: ignore
     from pydantic import Field, ConfigDict
-except Exception:  # fallback for pydantic v1
-    from pydantic import BaseSettings, Field
+except Exception:  # fallback if package missing or using pydantic v1
+    try:
+        from pydantic_settings_stub import BaseSettings  # type: ignore
+    except Exception:
+        from pydantic import BaseSettings  # type: ignore
+    from pydantic import Field
     ConfigDict = None
 
 from secrets_manager import get_manager
