@@ -39,7 +39,12 @@ export function AddEditStockItemForm({
       setQuantity(initialItem.quantity)
       setMinPar(initialItem.min_par)
       setStockCode(initialItem.stock_code || "")
-      setStatus(initialItem.status)
+      const allowedStatuses = ["available", "low", "out"] as const;
+      if (initialItem.status && allowedStatuses.includes(initialItem.status as typeof allowedStatuses[number])) {
+        setStatus(initialItem.status as typeof allowedStatuses[number]);
+      } else {
+        setStatus("available");
+      }
       setDepartmentId(initialItem.department_id)
     } else {
       setName("")

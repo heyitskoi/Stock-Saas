@@ -48,7 +48,7 @@ export function AddStockForm({ isOpen, onClose, item, onSubmit }: AddStockFormPr
     if (!item) return
 
     onSubmit({
-      itemId: item.id,
+      itemId: item.id.toString(),
       quantity,
       source,
       notes,
@@ -90,7 +90,7 @@ export function AddStockForm({ isOpen, onClose, item, onSubmit }: AddStockFormPr
               </Label>
               <div className="col-span-3 flex items-center gap-2">
                 <Input id="current-quantity" value={item.quantity} readOnly className="w-20 bg-muted text-center" />
-                <span className="text-sm text-muted-foreground">Min: {item.minPar}</span>
+                <span className="text-sm text-muted-foreground">Min: {item.min_par}</span>
               </div>
             </div>
 

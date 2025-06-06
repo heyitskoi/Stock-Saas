@@ -387,13 +387,10 @@ export function StockDashboard() {
       setIsLoading(prev => ({ ...prev, categories: true }));
       
       console.log("Creating category with data:", categoryData);
-      const newCategory = await apiFetch<Category>("/api/categories/", {
-        method: "POST",
-        body: {
-          name: categoryData.name,
-          icon: categoryData.icon || "Package",
-          department_id: categoryData.department_id,
-        },
+      const newCategory = await apiPost<Category>("/api/categories/", {
+        name: categoryData.name,
+        icon: categoryData.icon || "Package",
+        department_id: categoryData.department_id,
       });
       console.log("API response:", newCategory);
       

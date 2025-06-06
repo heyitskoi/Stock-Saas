@@ -49,7 +49,7 @@ export function StockTransferForm({
 }: StockTransferFormProps) {
   const [quantity, setQuantity] = useState(1)
   const [transferType, setTransferType] = useState<"internal" | "customer">("internal")
-  const [toDepartmentId, setToDepartmentId] = useState("")
+  const [toDepartmentId, setToDepartmentId] = useState<string>("")
   const [notes, setNotes] = useState("")
   const [date, setDate] = useState(() => {
     const today = new Date()
@@ -71,7 +71,7 @@ export function StockTransferForm({
     if (!item) return
 
     onSubmit({
-      itemId: item.id,
+      itemId: item.id.toString(),
       quantity,
       fromDepartmentId: currentDepartmentId,
       toDepartmentId: transferType === "internal" ? toDepartmentId : "customer",
@@ -133,7 +133,7 @@ export function StockTransferForm({
               <Label className="text-right">From</Label>
               <div className="col-span-3">
                 <Input
-                  value={departments.find((d) => d.id === currentDepartmentId)?.name || "Current Department"}
+                  value={departments.find((d) => d.id.toString() === currentDepartmentId)?.name || "Current Department"}
                   readOnly
                   className="bg-muted"
                 />
@@ -173,9 +173,9 @@ export function StockTransferForm({
                   </SelectTrigger>
                   <SelectContent>
                     {departments
-                      .filter((dept) => dept.id !== currentDepartmentId)
+                      .filter((dept) => dept.id.toString() !== currentDepartmentId)
                       .map((department) => (
-                        <SelectItem key={department.id} value={department.id}>
+                        <SelectItem key={department.id} value={department.id.toString()}>
                           {department.name}
                         </SelectItem>
                       ))}

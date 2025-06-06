@@ -28,7 +28,7 @@ interface EditCategoryFormProps {
 
 export function EditCategoryForm({ isOpen, onClose, category, departments, onSubmit }: EditCategoryFormProps) {
   const [name, setName] = useState(category?.name || "")
-  const [departmentId, setDepartmentId] = useState(category?.departmentId || "")
+  const [departmentId, setDepartmentId] = useState(category?.department_id?.toString() || "")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,7 +37,7 @@ export function EditCategoryForm({ isOpen, onClose, category, departments, onSub
     onSubmit({
       id: category.id,
       name,
-      departmentId,
+      department_id: Number(departmentId),
     })
 
     onClose()
@@ -81,7 +81,7 @@ export function EditCategoryForm({ isOpen, onClose, category, departments, onSub
                 </SelectTrigger>
                 <SelectContent>
                   {departments.map((department) => (
-                    <SelectItem key={department.id} value={department.id}>
+                    <SelectItem key={department.id} value={department.id.toString()}>
                       {department.name}
                     </SelectItem>
                   ))}

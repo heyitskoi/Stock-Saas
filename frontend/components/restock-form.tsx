@@ -34,7 +34,7 @@ export interface RestockFormData {
 }
 
 export function RestockForm({ isOpen, onClose, item, onSubmit }: RestockFormProps) {
-  const [quantity, setQuantity] = useState(item ? Math.max(item.minPar - item.quantity, 1) : 1)
+  const [quantity, setQuantity] = useState(item ? Math.max(item.min_par - item.quantity, 1) : 1)
   const [priority, setPriority] = useState("normal")
   const [notes, setNotes] = useState("")
 
@@ -43,7 +43,7 @@ export function RestockForm({ isOpen, onClose, item, onSubmit }: RestockFormProp
     if (!item) return
 
     onSubmit({
-      itemId: item.id,
+      itemId: item.id.toString(),
       quantity,
       priority,
       notes,
@@ -84,7 +84,7 @@ export function RestockForm({ isOpen, onClose, item, onSubmit }: RestockFormProp
               </Label>
               <div className="col-span-3 flex items-center gap-2">
                 <Input id="current-quantity" value={item.quantity} readOnly className="w-20 bg-muted text-center" />
-                <span className="text-sm text-muted-foreground">Min: {item.minPar}</span>
+                <span className="text-sm text-muted-foreground">Min: {item.min_par}</span>
               </div>
             </div>
 
