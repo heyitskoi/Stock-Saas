@@ -25,6 +25,8 @@ below a configured threshold, a warning is displayed during the status check.
 
 1. Copy `.env.example` to `.env` and adjust values. At a minimum set
    `SECRET_KEY`. `DATABASE_URL` defaults to SQLite but can be overridden.
+   When running with `docker-compose` the backend container reads
+   `SECRET_KEY` from this file.
    Optional settings include `ADMIN_USERNAME`, `ADMIN_PASSWORD`,
    `NEXT_PUBLIC_API_URL` for the frontend and background worker variables
    such as `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`, `SLACK_WEBHOOK_URL`,
@@ -214,11 +216,11 @@ docker build -t stock-saas-backend .
 docker run -e SECRET_KEY=mysecret -p 8000:8000 stock-saas-backend
 ```
 
-To start the backend together with a PostgreSQL database, Nginx reverse proxy and the Next.js frontend use `docker-compose`:
+To start the backend together with a PostgreSQL database, Nginx reverse proxy and the Next.js frontend use `docker-compose`. The compose file loads environment variables from `.env`, so ensure `SECRET_KEY` is set there:
 
 ```bash
 cp .env.example .env
-# edit values as needed
+# edit values as needed; docker-compose reads variables from this file
 docker-compose up --build
 ```
 
