@@ -1,11 +1,8 @@
-import os
-from dotenv import load_dotenv
+from config import settings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-load_dotenv()
-
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./inventory.db")
+DATABASE_URL = settings.database_url
 
 if DATABASE_URL.startswith("sqlite"):  # dev mode
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})

@@ -1,4 +1,3 @@
-import os
 import smtplib
 from email.message import EmailMessage
 from typing import Callable
@@ -7,12 +6,13 @@ import httpx
 from sqlalchemy.orm import Session
 
 from models import Item, Notification, User
+from config import settings
 
 
 def _send_email(message: str, recipient: str | None = None) -> None:
-    smtp_server = os.getenv("SMTP_SERVER")
-    recipient = recipient or os.getenv("ALERT_EMAIL_TO")
-    sender = os.getenv("ALERT_EMAIL_FROM", "noreply@example.com")
+    smtp_server = settings.smtp_server
+    recipient = recipient or settings.alert_email_to
+    sender = settings.alert_email_from
     if not (smtp_server and recipient):
         return
     msg = EmailMessage()
@@ -25,7 +25,7 @@ def _send_email(message: str, recipient: str | None = None) -> None:
 
 
 def _send_slack(message: str) -> None:
-    webhook = os.getenv("SLACK_WEBHOOK_URL")
+    webhook = settings.slack_webhook_url
     if webhook:
         httpx.post(webhook, json={"text": message})
 

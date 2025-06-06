@@ -23,11 +23,11 @@ below a configured threshold, a warning is displayed during the status check.
 
 ## Quickstart
 
-1. Copy `.env.example` to `.env` and adjust values.
-   Required settings include `DATABASE_URL`, `SECRET_KEY`,
-   `ADMIN_USERNAME`, `ADMIN_PASSWORD` and `NEXT_PUBLIC_API_URL` for the
-   frontend. Optional variables configure background workers:
-   `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`, `SLACK_WEBHOOK_URL`,
+1. Copy `.env.example` to `.env` and adjust values. At a minimum set
+   `SECRET_KEY`. `DATABASE_URL` defaults to SQLite but can be overridden.
+   Optional settings include `ADMIN_USERNAME`, `ADMIN_PASSWORD`,
+   `NEXT_PUBLIC_API_URL` for the frontend and background worker variables
+   such as `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`, `SLACK_WEBHOOK_URL`,
    `SMTP_SERVER`, `ALERT_EMAIL_TO` and `ALERT_EMAIL_FROM`.
 2. Install Python dependencies and start the API:
 
@@ -62,10 +62,10 @@ python inventory.py status
 ```
 
 Inventory data is stored in a SQLite database named `inventory.db` by default.
-Set `DATABASE_URL` to use a different database engine. You can also provide
+Set `DATABASE_URL` to use a different database engine. The application reads all
+settings via `config.py` from environment variables defined in `.env`. Provide
 `ADMIN_USERNAME` and `ADMIN_PASSWORD` to specify the first admin user's
-credentials. The API also expects a `SECRET_KEY` environment variable used to
-sign JWT tokens.
+credentials and ensure `SECRET_KEY` is set for signing JWT tokens.
 
 
 ## Running the API
