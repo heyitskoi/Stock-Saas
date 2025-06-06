@@ -211,7 +211,7 @@ cd frontend && npm install
 npm run dev
 ```
 
-By default it expects the FastAPI backend to run on `http://localhost:8000`. You can change this by setting `NEXT_PUBLIC_API_URL` when starting the Next.js server.
+The frontend expects the FastAPI backend to run on `http://localhost:8000`. If your API is available elsewhere set the environment variable `NEXT_PUBLIC_API_URL` before starting the dev server.
 
 The backend now enables CORS using FastAPI's `CORSMiddleware`. When the
 application runs with the default SQLite database (development mode), all
@@ -221,6 +221,8 @@ origin specified in `NEXT_PUBLIC_API_URL`.
 After logging in you will see the dashboard listing all items. Links are provided to pages for adding new stock, issuing items and recording returns. Each form uses the JWT token stored in `localStorage` to authenticate API requests.
 
 Admins can also open `/users` to manage accounts. The page lists existing users and includes a form to create new ones.
+
+The latest UI introduces a sidebar driven dashboard where stock is organised by **department** and **category**. Users can create, edit and delete departments or categories, restock items or transfer them between departments, and scan barcodes to look up stock quickly. A history dialog records all actions so past movements can be reviewed.
 
 ### Frontend tests
 

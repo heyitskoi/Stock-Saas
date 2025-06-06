@@ -6,21 +6,23 @@ from fastapi.testclient import TestClient
 import httpx
 import inspect
 
+os.environ.setdefault("SECRET_KEY", "test-secret")
+
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker  # noqa: E402
+
+import database  # noqa: E402
+import database_async  # noqa: E402
+import main  # noqa: E402
+from models import User, Tenant  # noqa: E402
+from auth import get_password_hash  # noqa: E402
+
+
 def _make_test_client(app):
     if "transport" in inspect.signature(TestClient).parameters:
         return TestClient(app, transport=httpx.WSGITransport(app))
     return TestClient(app)
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-
-import database
-import database_async
-import main
-from models import User, Tenant
-from auth import get_password_hash
-
-os.environ.setdefault("SECRET_KEY", "test-secret")
 
 
 @pytest.fixture
@@ -94,7 +96,7 @@ def get_token(client: TestClient) -> str:
         data={"username": "admin", "password": "admin"},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
-    assert resp.status_code == 200, (
-        f"Token request failed: {resp.status_code}, {resp.text}"
-    )
+    assert (
+        resp.status_code == 200
+    ), f"Token request failed: {resp.status_code}, {resp.text}"
     return resp.json()["access_token"]

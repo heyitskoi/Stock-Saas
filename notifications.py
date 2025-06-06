@@ -85,8 +85,6 @@ def check_thresholds(
                 loop.create_task(ws_manager.broadcast(item.tenant_id, payload))
             except RuntimeError:
                 loop = asyncio.new_event_loop()
-                loop.run_until_complete(
-                    ws_manager.broadcast(item.tenant_id, payload)
-                )
+                loop.run_until_complete(ws_manager.broadcast(item.tenant_id, payload))
                 loop.close()
     db.commit()

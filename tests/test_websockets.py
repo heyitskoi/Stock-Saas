@@ -5,20 +5,6 @@ import httpx
 import pytest
 import inspect
 
-def _make_test_client(app):
-    if "transport" in inspect.signature(TestClient).parameters:
-        return TestClient(app, transport=httpx.WSGITransport(app))
-    return TestClient(app)
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-import asyncio
-import database_async
-import database
-import main
-from models import User, Tenant
-from auth import get_password_hash
-
 # Setup temporary SQLite DB path
 db_fd, db_path = tempfile.mkstemp(prefix="test_async", suffix=".db")
 os.close(db_fd)
@@ -26,11 +12,25 @@ os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 os.environ["ASYNC_DATABASE_URL"] = f"sqlite+aiosqlite:///{db_path}"
 os.environ.setdefault("SECRET_KEY", "test-secret")
 
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker  # noqa: E402
+import asyncio  # noqa: E402
+import database_async  # noqa: E402
+import database  # noqa: E402
+import main  # noqa: E402
+from models import User, Tenant  # noqa: E402
+from auth import get_password_hash  # noqa: E402
+
+
+def _make_test_client(app):
+    if "transport" in inspect.signature(TestClient).parameters:
+        return TestClient(app, transport=httpx.WSGITransport(app))
+    return TestClient(app)
+
 
 @pytest.fixture
 def client():
-    import tempfile
-
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
     tmp.close()
     engine = create_engine(
