@@ -27,6 +27,7 @@ def teardown_module(module):
         os.remove(db_path)
     try:
         from tests.factories import _session as factory_session
+
         factory_session.close()
     except Exception:
         pass

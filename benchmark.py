@@ -39,9 +39,7 @@ def main() -> None:
     parser.add_argument(
         "--iterations", type=int, default=100, help="Number of requests"
     )
-    parser.add_argument(
-        "--tenant-id", type=int, default=1, help="Tenant ID to query"
-    )
+    parser.add_argument("--tenant-id", type=int, default=1, help="Tenant ID to query")
     args = parser.parse_args()
     asyncio.run(run_benchmark(args.url, args.iterations, args.tenant_id))
 

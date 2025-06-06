@@ -11,6 +11,7 @@ from inventory_core import (
     async_delete_item,
 )
 
+
 @pytest_asyncio.fixture
 async def adb():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True)
@@ -24,6 +25,7 @@ async def adb():
         await session.refresh(tenant)
         yield session, tenant.id
 
+
 @pytest.mark.asyncio
 async def test_async_add_issue_return(adb):
     session, tenant_id = adb
@@ -35,11 +37,14 @@ async def test_async_add_issue_return(adb):
     status = await async_get_status(session, tenant_id=tenant_id, name="widget")
     assert status["widget"]["available"] == 3
 
+
 @pytest.mark.asyncio
 async def test_async_update_and_delete(adb):
     session, tenant_id = adb
     await async_add_item(session, "phone", 2, threshold=1, tenant_id=tenant_id)
-    item = await async_update_item(session, "phone", tenant_id, new_name="smartphone", threshold=5)
+    item = await async_update_item(
+        session, "phone", tenant_id, new_name="smartphone", threshold=5
+    )
     assert item.name == "smartphone"
     assert item.threshold == 5
     await async_delete_item(session, "smartphone", tenant_id)

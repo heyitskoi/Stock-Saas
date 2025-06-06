@@ -31,14 +31,16 @@ def _build_csv(db: Session, limit: int, tenant_id: int) -> str:
     writer = csv.writer(output)
     writer.writerow(["id", "user_id", "item_id", "action", "quantity", "timestamp"])
     for log in logs:
-        writer.writerow([
-            log.id,
-            log.user_id,
-            log.item_id,
-            log.action,
-            log.quantity,
-            log.timestamp.isoformat(),
-        ])
+        writer.writerow(
+            [
+                log.id,
+                log.user_id,
+                log.item_id,
+                log.action,
+                log.quantity,
+                log.timestamp.isoformat(),
+            ]
+        )
     return output.getvalue()
 
 
@@ -102,7 +104,10 @@ def get_exported_csv(
     return Response(content=csv_data, media_type="text/csv")
 
 
-@router.get("/usage/{item_name}", summary="Aggregate issued/returned quantities for a single item")
+@router.get(
+    "/usage/{item_name}",
+    summary="Aggregate issued/returned quantities for a single item",
+)
 def item_usage(
     item_name: str,
     days: int = 30,
@@ -129,8 +134,7 @@ def item_usage(
         query = query.filter(Item.tenant_id == tenant_id)
 
     logs = (
-        query
-        .filter(AuditLog.timestamp >= since, AuditLog.timestamp <= until)
+        query.filter(AuditLog.timestamp >= since, AuditLog.timestamp <= until)
         .filter(AuditLog.action.in_(["issue", "return"]))
         .order_by(AuditLog.timestamp)
         .all()
@@ -173,8 +177,7 @@ def overall_usage(
         query = query.join(Item).filter(Item.tenant_id == tenant_id)
 
     logs = (
-        query
-        .filter(AuditLog.timestamp >= since, AuditLog.timestamp <= until)
+        query.filter(AuditLog.timestamp >= since, AuditLog.timestamp <= until)
         .filter(AuditLog.action.in_(["issue", "return"]))
         .order_by(AuditLog.timestamp)
         .all()

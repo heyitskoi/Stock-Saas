@@ -6,7 +6,8 @@ python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
 httpx==0.27.*
-
+aiosqlite
+pytest-asyncio
 factory-boy
 black==25.1.0
 flake8==7.2.0

@@ -149,13 +149,18 @@ async def api_add_item(
         payload.tenant_id,
         user_id=user.id,
     )
-    asyncio.create_task(ws_manager.broadcast(payload.tenant_id, {
-        "event": "update",
-        "item": item.name,
-        "available": item.available,
-        "in_use": item.in_use,
-        "threshold": item.threshold,
-    }))
+    asyncio.create_task(
+        ws_manager.broadcast(
+            payload.tenant_id,
+            {
+                "event": "update",
+                "item": item.name,
+                "available": item.available,
+                "in_use": item.in_use,
+                "threshold": item.threshold,
+            },
+        )
+    )
     return item
 
 
@@ -173,13 +178,18 @@ async def api_issue_item(
             tenant_id=payload.tenant_id,
             user_id=user.id,
         )
-        asyncio.create_task(ws_manager.broadcast(payload.tenant_id, {
-            "event": "update",
-            "item": item.name,
-            "available": item.available,
-            "in_use": item.in_use,
-            "threshold": item.threshold,
-        }))
+        asyncio.create_task(
+            ws_manager.broadcast(
+                payload.tenant_id,
+                {
+                    "event": "update",
+                    "item": item.name,
+                    "available": item.available,
+                    "in_use": item.in_use,
+                    "threshold": item.threshold,
+                },
+            )
+        )
         return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -199,13 +209,18 @@ async def api_return_item(
             tenant_id=payload.tenant_id,
             user_id=user.id,
         )
-        asyncio.create_task(ws_manager.broadcast(payload.tenant_id, {
-            "event": "update",
-            "item": item.name,
-            "available": item.available,
-            "in_use": item.in_use,
-            "threshold": item.threshold,
-        }))
+        asyncio.create_task(
+            ws_manager.broadcast(
+                payload.tenant_id,
+                {
+                    "event": "update",
+                    "item": item.name,
+                    "available": item.available,
+                    "in_use": item.in_use,
+                    "threshold": item.threshold,
+                },
+            )
+        )
         return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -227,7 +242,11 @@ def api_get_status(
     return data
 
 
-@app.get("/audit/logs", response_model=list[AuditLogResponse], summary="Get recent audit log entries")
+@app.get(
+    "/audit/logs",
+    response_model=list[AuditLogResponse],
+    summary="Get recent audit log entries",
+)
 def api_get_audit_logs(
     tenant_id: int,
     limit: int = 10,
@@ -252,13 +271,18 @@ async def api_update_item(
             threshold=payload.threshold,
             user_id=user.id,
         )
-        asyncio.create_task(ws_manager.broadcast(payload.tenant_id, {
-            "event": "update",
-            "item": item.name,
-            "available": item.available,
-            "in_use": item.in_use,
-            "threshold": item.threshold,
-        }))
+        asyncio.create_task(
+            ws_manager.broadcast(
+                payload.tenant_id,
+                {
+                    "event": "update",
+                    "item": item.name,
+                    "available": item.available,
+                    "in_use": item.in_use,
+                    "threshold": item.threshold,
+                },
+            )
+        )
         return item
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -277,10 +301,15 @@ async def api_delete_item(
             tenant_id=payload.tenant_id,
             user_id=user.id,
         )
-        asyncio.create_task(ws_manager.broadcast(payload.tenant_id, {
-            "event": "delete",
-            "item": payload.name,
-        }))
+        asyncio.create_task(
+            ws_manager.broadcast(
+                payload.tenant_id,
+                {
+                    "event": "delete",
+                    "item": payload.name,
+                },
+            )
+        )
         return {"detail": "Item deleted"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

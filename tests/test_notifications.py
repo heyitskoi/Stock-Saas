@@ -21,10 +21,22 @@ def test_notification_logs_created():
     db.add(item)
     db.commit()
 
-    db.add_all([
-        User(username="e1@example.com", hashed_password="x", tenant_id=1, notification_preference="email"),
-        User(username="s1@example.com", hashed_password="x", tenant_id=1, notification_preference="slack"),
-    ])
+    db.add_all(
+        [
+            User(
+                username="e1@example.com",
+                hashed_password="x",
+                tenant_id=1,
+                notification_preference="email",
+            ),
+            User(
+                username="s1@example.com",
+                hashed_password="x",
+                tenant_id=1,
+                notification_preference="slack",
+            ),
+        ]
+    )
     db.commit()
 
     emails: list[str] = []

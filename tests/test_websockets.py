@@ -1,5 +1,14 @@
 import os
+import tempfile
+
+# Setup temporary SQLite DB path
+db_fd, db_path = tempfile.mkstemp(prefix="test_async", suffix=".db")
+os.close(db_fd)
+os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+os.environ["ASYNC_DATABASE_URL"] = f"sqlite+aiosqlite:///{db_path}"
 os.environ.setdefault("SECRET_KEY", "test-secret")
+
+# Now safe to import app and DB modules
 from fastapi.testclient import TestClient
 import pytest
 from sqlalchemy import create_engine
@@ -14,9 +23,12 @@ from auth import get_password_hash
 @pytest.fixture
 def client():
     import tempfile
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
     tmp.close()
-    engine = create_engine(f"sqlite:///{tmp.name}", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        f"sqlite:///{tmp.name}", connect_args={"check_same_thread": False}
+    )
     TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
     # Patch database and main modules to use in-memory DB
@@ -64,8 +76,14 @@ def client():
 
 
 def _get_token(client: TestClient) -> str:
-    resp = client.post("/token", data={"username": "admin", "password": "admin"})
-    assert resp.status_code == 200
+    resp = client.post(
+        "/token",
+        data={"username": "admin", "password": "admin"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert (
+        resp.status_code == 200
+    ), f"Token request failed: {resp.status_code}, {resp.text}"
     return resp.json()["access_token"]
 
 
@@ -85,3 +103,8 @@ def test_websocket_receives_inventory_updates(client):
         assert data["item"] == "ws-item"
         assert data["available"] == 1
         assert data["in_use"] == 0
+
+
+def teardown_module(module):
+    if os.path.exists(db_path):
+        os.remove(db_path)

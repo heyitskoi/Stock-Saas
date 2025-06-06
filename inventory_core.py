@@ -290,9 +290,7 @@ async def async_get_recent_logs(
     if tenant_id is not None:
         stmt = stmt.join(Item).where(Item.tenant_id == tenant_id)
 
-    result = await db.execute(
-        stmt.order_by(AuditLog.timestamp.desc()).limit(limit)
-    )
+    result = await db.execute(stmt.order_by(AuditLog.timestamp.desc()).limit(limit))
     return result.scalars().all()
 
 

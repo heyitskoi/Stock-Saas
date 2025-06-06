@@ -4,6 +4,7 @@ from collections import defaultdict
 from fastapi import WebSocket
 from starlette.websockets import WebSocketDisconnect
 
+
 class InventoryWSManager:
     def __init__(self) -> None:
         self.connections: Dict[int, Set[WebSocket]] = defaultdict(set)
