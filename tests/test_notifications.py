@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 
 from models import Base, Item, Notification, User
 from notifications import check_thresholds
+from websocket_manager import InventoryWSManager
 
 
 def setup_db():
@@ -34,6 +35,12 @@ def test_notification_logs_created():
                 hashed_password="x",
                 tenant_id=1,
                 notification_preference="slack",
+            ),
+            User(
+                username="n1@example.com",
+                hashed_password="x",
+                tenant_id=1,
+                notification_preference="none",
             ),
         ]
     )
@@ -71,3 +78,25 @@ def test_no_notifications_when_stock_ok():
     assert emails == []
     assert slacks == []
     assert db.query(Notification).count() == 0
+
+
+def test_websocket_broadcast_on_low_stock():
+    db = setup_db()
+    item = Item(name="ws", available=0, in_use=0, threshold=1, tenant_id=1)
+    db.add(item)
+    db.commit()
+
+    ws_mgr = InventoryWSManager()
+    received = []
+
+    async def fake_broadcast(tid, data):
+        received.append((tid, data))
+
+    ws_mgr.broadcast = fake_broadcast
+
+    check_thresholds(db, email_func=None, slack_func=None, ws_manager=ws_mgr)
+
+    assert received
+    tid, data = received[0]
+    assert tid == 1
+    assert data["event"] == "low_stock"

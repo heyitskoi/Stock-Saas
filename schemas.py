@@ -38,7 +38,7 @@ class ItemResponse(ItemBase):
 
 class UserBase(BaseModel):
     username: str
-    notification_preference: str = "email"
+    notification_preference: str = "email"  # "email", "slack" or "none"
 
 
 class UserCreate(UserBase):
