@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-test('stock dashboard shows departments', async ({ page }) => {
+test('stock dashboard shows departments and allows adding one', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Systems Stock' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Systems' })).toBeVisible();
+  await page.getByRole('button', { name: 'Add Department' }).click();
+  await page.getByPlaceholder('Department Name').fill('QA');
+  await page.getByRole('button', { name: 'Add' }).click();
+  await expect(page.getByRole('button', { name: 'QA' })).toBeVisible();
 });
 
 test('add item form fields present', async ({ page }) => {
