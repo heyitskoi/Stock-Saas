@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User
+import pyotp
 from schemas import UserCreate, UserResponse, UserUpdate, UserDelete
 from auth import require_role, get_password_hash, ensure_tenant
 
@@ -30,6 +31,7 @@ def create_user(
         role=payload.role,
         tenant_id=payload.tenant_id,
         notification_preference=payload.notification_preference,
+        totp_secret=pyotp.random_base32(),
     )
     db.add(new_user)
     db.commit()
