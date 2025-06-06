@@ -3,15 +3,15 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_USER: stock
-      POSTGRES_PASSWORD: stock
-      POSTGRES_DB: stockdb
+      POSTGRES_USER: ${POSTGRES_USER:-stock}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stock}
+      POSTGRES_DB: ${POSTGRES_DB:-stockdb}
     volumes:
       - postgres-data:/var/lib/postgresql/data
   backend:
     build: .
     environment:
-      DATABASE_URL: postgres://stock:stock@db:5432/stockdb
+      DATABASE_URL: postgres://${POSTGRES_USER:-stock}:${POSTGRES_PASSWORD:-stock}@db:5432/${POSTGRES_DB:-stockdb}
       SECRET_KEY: changeme
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: admin
@@ -25,7 +25,7 @@ services:
     build: .
     command: celery -A tasks worker --loglevel=info
     environment:
-      DATABASE_URL: postgres://stock:stock@db:5432/stockdb
+      DATABASE_URL: postgres://${POSTGRES_USER:-stock}:${POSTGRES_PASSWORD:-stock}@db:5432/${POSTGRES_DB:-stockdb}
       CELERY_BROKER_URL: redis://redis:6379/0
     depends_on:
       - db
@@ -34,7 +34,7 @@ services:
     build: .
     command: celery -A tasks beat --loglevel=info
     environment:
-      DATABASE_URL: postgres://stock:stock@db:5432/stockdb
+      DATABASE_URL: postgres://${POSTGRES_USER:-stock}:${POSTGRES_PASSWORD:-stock}@db:5432/${POSTGRES_DB:-stockdb}
       CELERY_BROKER_URL: redis://redis:6379/0
     depends_on:
       - db
@@ -48,5 +48,13 @@ services:
       - backend
     ports:
       - "3000:3000"
+  nginx:
+    image: nginx:1.25
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
 volumes:
   postgres-data:
