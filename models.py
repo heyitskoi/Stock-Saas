@@ -15,17 +15,44 @@ class Tenant(Base):
     items = relationship("Item", back_populates="tenant")
 
 
+class Department(Base):
+    __tablename__ = "departments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    icon = Column(String, nullable=True)
+
+    items = relationship("Item", back_populates="department")
+    categories = relationship("Category", back_populates="department")
+
+
+class Category(Base):
+    __tablename__ = "categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    department_id = Column(Integer, ForeignKey("departments.id"))
+    icon = Column(String, nullable=True)
+
+    department = relationship("Department", back_populates="categories")
+    items = relationship("Item", back_populates="category")
+
+
 class Item(Base):
     __tablename__ = "items"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id"))
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     available = Column(Integer, default=0)
     in_use = Column(Integer, default=0)
     threshold = Column(Integer, default=0)
 
     tenant = relationship("Tenant", back_populates="items")
+    department = relationship("Department", back_populates="items")
+    category = relationship("Category", back_populates="items")
 
     __table_args__ = (UniqueConstraint("name", "tenant_id", name="uix_name_tenant"),)
 
