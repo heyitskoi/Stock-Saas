@@ -222,6 +222,8 @@ cp .env.example .env
 docker-compose up --build
 ```
 
+Alternatively run `./scripts/quickstart.sh` to start all services.
+
 The compose file also starts Redis along with Celery worker and beat containers
 for background tasks. Nginx listens on port `80` and forwards requests to the
 FastAPI backend running on `backend:8000`. The API is thus reachable on
