@@ -19,3 +19,4 @@ pydantic-settings
 redis
 pyotp
 PyYAML>=6.0.1
+psycopg2-binary

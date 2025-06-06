@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     cors_allow_origins: str | None = Field(None, env="CORS_ALLOW_ORIGINS")
     celery_broker_url: str = Field("redis://localhost:6379/0", env="CELERY_BROKER_URL")
     redis_url: str = Field("redis://localhost:6379/1", env="REDIS_URL")
+    rate_limit_redis_url: str = Field("memory://", env="RATE_LIMIT_REDIS_URL")
     stock_check_interval: int = Field(3600, env="STOCK_CHECK_INTERVAL")
     async_database_url: str | None = Field(None, env="ASYNC_DATABASE_URL")
     slack_webhook_url: str | None = Field(None, env="SLACK_WEBHOOK_URL")
