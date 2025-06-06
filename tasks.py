@@ -1,15 +1,16 @@
-import os
 from celery import Celery
 from database import SessionLocal
 from notifications import check_thresholds
 
-broker_url = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+from config import settings
+
+broker_url = settings.celery_broker_url
 celery_app = Celery("stock_saas", broker=broker_url)
 
 celery_app.conf.beat_schedule = {
     "check-stock-levels": {
         "task": "tasks.check_stock_levels",
-        "schedule": int(os.getenv("STOCK_CHECK_INTERVAL", 3600)),
+        "schedule": settings.stock_check_interval,
     }
 }
 

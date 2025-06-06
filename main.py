@@ -1,5 +1,6 @@
-import os
 import asyncio
+
+from config import settings
 
 from fastapi import FastAPI, HTTPException, Depends, WebSocket
 from fastapi.security import OAuth2PasswordRequestForm
@@ -55,7 +56,7 @@ app = FastAPI(
 ws_manager = InventoryWSManager()
 
 # Configure CORS
-frontend_origin = os.getenv("NEXT_PUBLIC_API_URL")
+frontend_origin = settings.next_public_api_url
 origins = [frontend_origin] if frontend_origin else []
 if DATABASE_URL.startswith("sqlite"):
     origins = ["*"]
@@ -91,8 +92,8 @@ async def inventory_ws(websocket: WebSocket, tenant_id: int):
 
 @app.on_event("startup")
 def create_default_admin():
-    username = os.getenv("ADMIN_USERNAME")
-    password = os.getenv("ADMIN_PASSWORD")
+    username = settings.admin_username
+    password = settings.admin_password
     if not (username and password) and DATABASE_URL.startswith("sqlite"):
         username = username or "admin"
         password = password or "admin"

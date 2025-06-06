@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
-import os
-from dotenv import load_dotenv
+
+from config import settings
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -14,9 +14,7 @@ from sqlalchemy import select
 from database_async import get_async_db
 from models import User
 
-load_dotenv()
-
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = settings.secret_key
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY environment variable not set")
 ALGORITHM = "HS256"
