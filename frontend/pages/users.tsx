@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { listUsers, createUser, deleteUser } from '../lib/api';
+import { useAuth } from '../lib/AuthContext';
 
 export default function UsersPage() {
   const router = useRouter();
+  const { token } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -11,7 +13,6 @@ export default function UsersPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
       return;
@@ -19,11 +20,10 @@ export default function UsersPage() {
     listUsers(token)
       .then(setUsers)
       .catch(() => router.push('/login'));
-  }, [router]);
+  }, [router, token]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const token = localStorage.getItem('token');
     if (!token) {
       setError('Not authenticated');
       return;
@@ -41,7 +41,6 @@ export default function UsersPage() {
   }
 
   async function handleDelete(id: number) {
-    const token = localStorage.getItem('token');
     if (!token) return;
     try {
       await deleteUser(token, id);

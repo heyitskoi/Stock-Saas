@@ -1,9 +1,11 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { updateUser } from '../lib/api';
+import { useAuth } from '../lib/AuthContext';
 
 export default function EditUserPage() {
   const router = useRouter();
+  const { token } = useAuth();
   const [id, setId] = useState<number | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -24,7 +26,6 @@ export default function EditUserPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const token = localStorage.getItem('token');
     if (!token || id === null) {
       setError('Not authenticated');
       return;

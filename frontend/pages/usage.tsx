@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getOverallUsage } from '../lib/api';
+import { useAuth } from '../lib/AuthContext';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -28,6 +29,7 @@ export default function UsagePage() {
   const [tenantId, setTenantId] = useState(1);
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
+  const { token } = useAuth();
 
   useEffect(() => {
     const now = new Date();
@@ -40,7 +42,6 @@ export default function UsagePage() {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     if (!token || !start || !end) return;
     getOverallUsage(token, {
       tenant_id: tenantId,
@@ -49,7 +50,7 @@ export default function UsagePage() {
     })
       .then(setUsage)
       .catch(() => setUsage([]));
-  }, [tenantId, start, end]);
+  }, [tenantId, start, end, token]);
 
   const chartData = {
     labels: usage.map((u) => u.date),
