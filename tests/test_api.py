@@ -403,3 +403,73 @@ def test_user_route_rate_limiting(client):
 
     blocked = client.get("/users/", params={"tenant_id": 1}, headers=headers)
     assert blocked.status_code == 429
+
+
+def test_multi_tenant_isolation(client):
+    from tests.factories import _session
+    from models import Tenant, User
+    from auth import get_password_hash
+
+    tenant2 = Tenant(name="second")
+    _session.add(tenant2)
+    _session.commit()
+    _session.refresh(tenant2)
+
+    admin2 = User(
+        username="admin2",
+        hashed_password=get_password_hash("admin2"),
+        role="admin",
+        tenant_id=tenant2.id,
+        notification_preference="email",
+    )
+    _session.add(admin2)
+    _session.commit()
+
+    token1 = get_token(client)
+    resp = client.post("/token", data={"username": "admin2", "password": "admin2"})
+    assert resp.status_code == 200
+    token2 = resp.json()["access_token"]
+
+    h1 = {"Authorization": f"Bearer {token1}"}
+    h2 = {"Authorization": f"Bearer {token2}"}
+
+    client.post(
+        "/items/add",
+        json={"name": "widget", "quantity": 2, "threshold": 0, "tenant_id": 1},
+        headers=h1,
+    )
+
+    client.post(
+        "/items/add",
+        json={"name": "widget", "quantity": 5, "threshold": 0, "tenant_id": tenant2.id},
+        headers=h2,
+    )
+
+    resp1 = client.get("/items/status", params={"name": "widget", "tenant_id": 1}, headers=h1)
+    resp2 = client.get(
+        "/items/status",
+        params={"name": "widget", "tenant_id": tenant2.id},
+        headers=h2,
+    )
+
+    assert resp1.status_code == 200
+    assert resp2.status_code == 200
+    assert resp1.json()["widget"]["available"] == 2
+    assert resp2.json()["widget"]["available"] == 5
+
+    logs1 = client.get(
+        "/audit/logs", params={"tenant_id": 1, "limit": 10}, headers=h1
+    ).json()
+    logs2 = client.get(
+        "/audit/logs",
+        params={"tenant_id": tenant2.id, "limit": 10},
+        headers=h2,
+    ).json()
+
+    from models import Item
+
+    t1_ids = {i.id for i in _session.query(Item).filter(Item.tenant_id == 1)}
+    t2_ids = {i.id for i in _session.query(Item).filter(Item.tenant_id == tenant2.id)}
+
+    assert all(log["item_id"] in t1_ids for log in logs1)
+    assert all(log["item_id"] in t2_ids for log in logs2)

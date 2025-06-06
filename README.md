@@ -83,6 +83,14 @@ uvicorn main:app --reload
 API endpoints mirror the CLI commands and are documented at `/docs` when the server is running.
 Authenticate by posting your username and password to `/token` and include the returned token using `Authorization: Bearer <token>`.
 
+### Required headers and parameters
+
+All authenticated endpoints require an `Authorization` header with the JWT token
+returned from `/token`. POST and PUT requests should also include
+`Content-Type: application/json`.
+Every API call must provide a `tenant_id` value (query parameter or JSON body)
+to ensure the request is scoped to the correct tenant.
+
 ## Database migrations
 
 Alembic manages schema changes. After installing dependencies you can
