@@ -36,10 +36,17 @@ def _make_test_client(app):
     return TestClient(app)
 
 
+engine = None
+TestingSessionLocal = None
+async_engine = None
+TestingAsyncSessionLocal = None
+
+
 @pytest.fixture
 def client():
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
     tmp.close()
+    global engine, TestingSessionLocal, async_engine, TestingAsyncSessionLocal
     engine = create_engine(
         f"sqlite:///{tmp.name}", connect_args={"check_same_thread": False}
     )
@@ -205,23 +212,31 @@ def teardown_module(module):
 
 @pytest.fixture(scope="function")
 def db() -> Generator:
-    Base.metadata.create_all(bind=engine)
+    _engine = create_engine(
+        f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
+    )
+    TestingSessionLocal = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
+    Base.metadata.create_all(bind=_engine)
     db = TestingSessionLocal()
     try:
         yield db
     finally:
         db.close()
-        Base.metadata.drop_all(bind=engine)
+        Base.metadata.drop_all(bind=_engine)
+        _engine.dispose()
 
 
 @pytest.fixture(scope="function")
 async def async_db() -> AsyncGenerator:
-    async with async_engine.begin() as conn:
+    _engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}", future=True)
+    TestingAsyncSessionLocal = async_sessionmaker(_engine, expire_on_commit=False)
+    async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     async with TestingAsyncSessionLocal() as session:
         yield session
-    async with async_engine.begin() as conn:
+    async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    await _engine.dispose()
 
 
 @pytest.fixture(scope="function")

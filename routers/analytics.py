@@ -12,6 +12,7 @@ from auth import require_role, ensure_tenant
 import csv
 from io import StringIO
 from models import User, AuditLog, Item
+from schemas import AuditLogResponse
 from datetime import datetime, timedelta
 from pydantic import BaseModel, validator, conint
 from time import time
@@ -21,6 +22,18 @@ import uuid
 router = APIRouter(prefix="/analytics")
 
 admin_or_manager = require_role(["admin", "manager"])
+
+
+@router.get("/audit/logs", response_model=list[AuditLogResponse])
+def recent_audit_logs(
+    tenant_id: int,
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    ensure_tenant(user, tenant_id)
+    logs = get_recent_logs(db, limit, tenant_id)
+    return logs
 
 # In-memory store for export task results
 export_tasks: dict[str, str | None] = {}

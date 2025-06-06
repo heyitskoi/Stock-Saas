@@ -160,6 +160,12 @@ class CategoryResponse(CategoryBase):
         model_config = ConfigDict(from_attributes=True)
 
 
+class CategoryUpdate(BaseModel):
+    name: str | None = None
+    department_id: int | None = None
+    icon: str | None = None
+
+
 class PasswordResetRequest(BaseModel):
     username: str
 

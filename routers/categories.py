@@ -8,7 +8,7 @@ from auth import get_current_user
 from models import User
 
 
-router = APIRouter(prefix="/categories", tags=["categories"])
+router = APIRouter(prefix="/api/categories", tags=["categories"])
 
 
 @router.post("/", response_model=CategoryResponse)
@@ -19,14 +19,7 @@ def create_category(
 ):
     """Create a new category."""
     # Check if department exists
-    department = (
-        db.query(Department)
-        .filter(
-            Department.id == category.department_id,
-            Department.tenant_id == current_user.tenant_id,
-        )
-        .first()
-    )
+    department = db.query(Department).filter(Department.id == category.department_id).first()
     if not department:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -34,14 +27,7 @@ def create_category(
         )
 
     # Check if category already exists
-    existing_category = (
-        db.query(Category)
-        .filter(
-            Category.name == category.name,
-            Category.tenant_id == current_user.tenant_id,
-        )
-        .first()
-    )
+    existing_category = db.query(Category).filter(Category.name == category.name).first()
     if existing_category:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -51,7 +37,6 @@ def create_category(
     db_category = Category(
         name=category.name,
         department_id=category.department_id,
-        tenant_id=current_user.tenant_id,
         icon=category.icon,
     )
     db.add(db_category)
@@ -67,7 +52,7 @@ def get_categories(
     department_id: Optional[int] = None,
 ):
     """Get all categories for the current tenant."""
-    query = db.query(Category).filter(Category.tenant_id == current_user.tenant_id)
+    query = db.query(Category)
     if department_id:
         query = query.filter(Category.department_id == department_id)
     return query.all()
@@ -80,14 +65,7 @@ def get_category(
     current_user: User = Depends(get_current_user),
 ):
     """Get a specific category by ID."""
-    category = (
-        db.query(Category)
-        .filter(
-            Category.id == category_id,
-            Category.tenant_id == current_user.tenant_id,
-        )
-        .first()
-    )
+    category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -104,14 +82,7 @@ def update_category(
     current_user: User = Depends(get_current_user),
 ):
     """Update a category."""
-    db_category = (
-        db.query(Category)
-        .filter(
-            Category.id == category_id,
-            Category.tenant_id == current_user.tenant_id,
-        )
-        .first()
-    )
+    db_category = db.query(Category).filter(Category.id == category_id).first()
     if not db_category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -120,14 +91,7 @@ def update_category(
 
     # Check if department exists if being updated
     if category_update.department_id:
-        department = (
-            db.query(Department)
-            .filter(
-                Department.id == category_update.department_id,
-                Department.tenant_id == current_user.tenant_id,
-            )
-            .first()
-        )
+        department = db.query(Department).filter(Department.id == category_update.department_id).first()
         if not department:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -143,21 +107,14 @@ def update_category(
     return db_category
 
 
-@router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{category_id}")
 def delete_category(
     category_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Delete a category."""
-    db_category = (
-        db.query(Category)
-        .filter(
-            Category.id == category_id,
-            Category.tenant_id == current_user.tenant_id,
-        )
-        .first()
-    )
+    db_category = db.query(Category).filter(Category.id == category_id).first()
     if not db_category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -166,4 +123,4 @@ def delete_category(
 
     db.delete(db_category)
     db.commit()
-    return None
+    return {"detail": "Category deleted"}
