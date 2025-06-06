@@ -37,7 +37,9 @@ below a configured threshold, a warning is displayed during the status check.
   worker variables such as `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`,
   `SLACK_WEBHOOK_URL`, `SMTP_SERVER`, `ALERT_EMAIL_TO` and
   `ALERT_EMAIL_FROM`. **Do not commit your `.env` file to version control as
-   it may contain secrets.**
+  it may contain secrets.**
+   When using `docker-compose`, set `NEXT_PUBLIC_API_URL` to
+  `http://backend:8000` and `CORS_ALLOW_ORIGINS` to `http://localhost:3000`.
 2. Install Python dependencies and start the API:
 
 ```bash
@@ -271,6 +273,10 @@ To start the backend together with a PostgreSQL database and the Next.js fronten
 ```bash
 cp .env.example .env
 # edit values as needed; docker-compose reads variables from this file
+# When running the containers you should point the frontend at the
+# backend service and allow requests from the browser:
+# NEXT_PUBLIC_API_URL=http://backend:8000
+# CORS_ALLOW_ORIGINS=http://localhost:3000
 docker-compose up --build
 ```
 
