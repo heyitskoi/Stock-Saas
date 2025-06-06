@@ -110,7 +110,7 @@ def test_websocket_receives_inventory_updates(client):
     token = _get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
 
-    with client.websocket_connect("/ws/inventory/1") as ws:
+    with client.websocket_connect(f"/ws/inventory/1?token={token}") as ws:
         resp = client.post(
             "/items/add",
             json={
@@ -143,6 +143,15 @@ def test_websocket_transfer_notification(client):
     _session.add(dest)
     _session.commit()
     _session.refresh(dest)
+    dest_user = User(
+        username="dest_admin",
+        hashed_password=get_password_hash("dest"),
+        role="admin",
+        tenant_id=dest.id,
+        notification_preference="email",
+    )
+    _session.add(dest_user)
+    _session.commit()
 
     client.post(
         "/items/add",
@@ -150,8 +159,16 @@ def test_websocket_transfer_notification(client):
         headers=headers,
     )
 
-    with client.websocket_connect("/ws/inventory/1") as ws1, client.websocket_connect(
-        f"/ws/inventory/{dest.id}"
+    dest_token_resp = client.post(
+        "/token",
+        data={"username": "dest_admin", "password": "dest"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert dest_token_resp.status_code == 200
+    dest_token = dest_token_resp.json()["access_token"]
+
+    with client.websocket_connect(f"/ws/inventory/1?token={token}") as ws1, client.websocket_connect(
+        f"/ws/inventory/{dest.id}?token={dest_token}"
     ) as ws2:
         resp = client.post(
             "/items/transfer",

@@ -9,9 +9,12 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.websockets import WebSocketDisconnect
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from jose import JWTError, jwt
 
 from database import Base, engine, get_db, SessionLocal, DATABASE_URL
 from database_async import get_async_db
+import database_async
 from inventory_core import (
     get_status,
     get_recent_logs,
@@ -23,7 +26,13 @@ from inventory_core import (
     async_update_item,
     async_delete_item,
 )
-from auth import login_for_access_token, require_role, get_password_hash
+from auth import (
+    login_for_access_token,
+    require_role,
+    get_password_hash,
+    SECRET_KEY,
+    ALGORITHM,
+)
 from models import User, Tenant
 from schemas import (
     ItemCreate,
@@ -85,6 +94,34 @@ app.include_router(categories_router)
 
 @app.websocket("/ws/inventory/{tenant_id}")
 async def inventory_ws(websocket: WebSocket, tenant_id: int):
+    """Websocket endpoint broadcasting inventory updates scoped to a tenant."""
+
+    token = websocket.query_params.get("token")
+    if not token:
+        auth_header = websocket.headers.get("Authorization")
+        if auth_header and auth_header.lower().startswith("bearer "):
+            token = auth_header.split(" ", 1)[1]
+
+    if not token:
+        await websocket.close(code=1008)
+        return
+
+    async with database_async.AsyncSessionLocal() as session:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            username = payload.get("sub")
+            if username is None:
+                raise JWTError
+        except JWTError:
+            await websocket.close(code=1008)
+            return
+
+        result = await session.execute(select(User).where(User.username == username))
+        user = result.scalars().first()
+        if not user or user.tenant_id != tenant_id:
+            await websocket.close(code=1008)
+            return
+
     await ws_manager.connect(websocket, tenant_id)
     try:
         while True:
