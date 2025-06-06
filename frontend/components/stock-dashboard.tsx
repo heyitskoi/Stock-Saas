@@ -206,7 +206,7 @@ export function StockDashboard() {
         const fetchedDepartments = await apiGet<Department[]>('/departments/');
         if (Array.isArray(fetchedDepartments) && fetchedDepartments.length > 0) {
           setDepartments(fetchedDepartments);
-          console.log("Fetched departments:", fetchedDepartments);
+          if (isDev) console.log("Fetched departments:", fetchedDepartments);
         } else {
           console.warn("Empty or invalid departments response:", fetchedDepartments);
         }
@@ -217,7 +217,7 @@ export function StockDashboard() {
         const fetchedCategories = await apiGet<Category[]>('/categories/');
         if (Array.isArray(fetchedCategories)) {
           setCategories(fetchedCategories);
-          console.log("Fetched categories:", fetchedCategories);
+          if (isDev) console.log("Fetched categories:", fetchedCategories);
         } else {
           console.warn("Empty or invalid categories response:", fetchedCategories);
         }
@@ -424,7 +424,7 @@ export function StockDashboard() {
       // Set loading state for categories
       setIsLoading(prev => ({ ...prev, categories: true }));
       
-      console.log("Creating category with data:", categoryData);
+      if (isDev) console.log("Creating category with data:", categoryData);
         const newCategory = await apiFetch<Category>("/categories/", {
         method: "POST",
         body: {
@@ -433,7 +433,7 @@ export function StockDashboard() {
           department_id: categoryData.department_id,
         },
       });
-      console.log("API response:", newCategory);
+      if (isDev) console.log("API response:", newCategory);
       
       // Only update UI after successful API call
       if (newCategory && typeof newCategory.id === 'number') {
@@ -469,7 +469,7 @@ export function StockDashboard() {
 
   const handleItemAction = (action: string, itemId: string) => {
     // Implementation for item actions (edit, delete, move)
-    console.log(`${action} item:`, itemId)
+    if (isDev) console.log(`${action} item:`, itemId)
 
     const item = items.find((item) => item.id === parseInt(itemId))
     if (!item) {
@@ -512,7 +512,7 @@ export function StockDashboard() {
 
   const handleExportCSV = () => {
     // Implementation for exporting to CSV
-    console.log("Exporting to CSV")
+    if (isDev) console.log("Exporting to CSV")
     toast({
       title: "Export to CSV",
       description: "Your data is being exported to CSV format",
@@ -529,7 +529,7 @@ export function StockDashboard() {
 
   const handleExportPDF = () => {
     // Implementation for exporting to PDF
-    console.log("Exporting to PDF")
+    if (isDev) console.log("Exporting to PDF")
     toast({
       title: "Export to PDF",
       description: "Your data is being exported to PDF format",
@@ -576,7 +576,7 @@ export function StockDashboard() {
   }
 
   const handleRestockSubmit = (data: RestockFormData) => {
-    console.log("Restock request submitted:", data)
+    if (isDev) console.log("Restock request submitted:", data)
 
     // Add to stock history
     const historyEntry: StockHistoryEntry = {
@@ -604,7 +604,7 @@ export function StockDashboard() {
   }
 
   const handleAddStockSubmit = async (data: AddStockData) => {
-    console.log("Add stock submitted:", data)
+    if (isDev) console.log("Add stock submitted:", data)
 
     if (!selectedItem) return
 
@@ -664,7 +664,7 @@ export function StockDashboard() {
   }
 
   const handleTransferStockSubmit = (data: StockTransferData) => {
-    console.log("Transfer stock submitted:", data)
+    if (isDev) console.log("Transfer stock submitted:", data)
 
     if (!selectedItem) return
 
