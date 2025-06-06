@@ -95,6 +95,39 @@ class TenantResponse(TenantBase):
         orm_mode = True
 
 
+class DepartmentBase(BaseModel):
+    name: str
+    icon: str | None = None
+
+
+class DepartmentCreate(DepartmentBase):
+    pass
+
+
+class DepartmentResponse(DepartmentBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
+class CategoryBase(BaseModel):
+    name: str
+    department_id: int
+    icon: str | None = None
+
+
+class CategoryCreate(CategoryBase):
+    pass
+
+
+class CategoryResponse(CategoryBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
 class PasswordResetRequest(BaseModel):
     username: str
 
