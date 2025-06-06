@@ -15,9 +15,11 @@ from database_async import get_async_db
 from inventory_core import (
     get_status,
     get_recent_logs,
+    get_item_history,
     async_add_item,
     async_issue_item,
     async_return_item,
+    async_transfer_item,
     async_update_item,
     async_delete_item,
 )
@@ -29,6 +31,8 @@ from schemas import (
     AuditLogResponse,
     ItemUpdate,
     ItemDelete,
+    TransferRequest,
+    TransferResponse,
 )
 from routers.users import router as users_router
 from routers.analytics import router as analytics_router
@@ -258,6 +262,91 @@ async def api_return_item(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.post(
+    "/items/transfer",
+    response_model=TransferResponse,
+    summary="Transfer stock between departments",
+)
+async def api_transfer_item(
+    payload: TransferRequest,
+    db: AsyncSession = Depends(get_async_db),
+    user: User = Depends(admin_or_manager),
+):
+    try:
+        from_item, to_item = await async_transfer_item(
+            db,
+            payload.name,
+            payload.quantity,
+            from_tenant_id=payload.from_tenant_id,
+            to_tenant_id=payload.to_tenant_id,
+            user_id=user.id,
+        )
+        transfer_payload = {
+            "event": "transfer",
+            "item": payload.name,
+            "quantity": payload.quantity,
+            "from": payload.from_tenant_id,
+            "to": payload.to_tenant_id,
+        }
+        asyncio.create_task(
+            ws_manager.broadcast(payload.from_tenant_id, transfer_payload)
+        )
+        asyncio.create_task(
+            ws_manager.broadcast(payload.to_tenant_id, transfer_payload)
+        )
+        asyncio.create_task(
+            ws_manager.broadcast(
+                payload.from_tenant_id,
+                {
+                    "event": "update",
+                    "item": from_item.name,
+                    "available": from_item.available,
+                    "in_use": from_item.in_use,
+                    "threshold": from_item.threshold,
+                },
+            )
+        )
+        asyncio.create_task(
+            ws_manager.broadcast(
+                payload.to_tenant_id,
+                {
+                    "event": "update",
+                    "item": to_item.name,
+                    "available": to_item.available,
+                    "in_use": to_item.in_use,
+                    "threshold": to_item.threshold,
+                },
+            )
+        )
+        if from_item.threshold and from_item.available < from_item.threshold:
+            asyncio.create_task(
+                ws_manager.broadcast(
+                    payload.from_tenant_id,
+                    {
+                        "event": "low_stock",
+                        "item": from_item.name,
+                        "available": from_item.available,
+                        "threshold": from_item.threshold,
+                    },
+                )
+            )
+        if to_item.threshold and to_item.available < to_item.threshold:
+            asyncio.create_task(
+                ws_manager.broadcast(
+                    payload.to_tenant_id,
+                    {
+                        "event": "low_stock",
+                        "item": to_item.name,
+                        "available": to_item.available,
+                        "threshold": to_item.threshold,
+                    },
+                )
+            )
+        return {"from_item": from_item, "to_item": to_item}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.get("/items/status")
 def api_get_status(
     tenant_id: int,
@@ -286,6 +375,21 @@ def api_get_audit_logs(
     user: User = Depends(admin_or_manager),
 ):
     return get_recent_logs(db, limit, tenant_id)
+
+
+@app.get(
+    "/items/history",
+    response_model=list[AuditLogResponse],
+    summary="Get audit log history for an item",
+)
+def api_item_history(
+    tenant_id: int,
+    name: str,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_or_manager),
+):
+    return get_item_history(db, name, tenant_id, limit)
 
 
 @app.put("/items/update", response_model=ItemResponse, summary="Update an item")

@@ -9,6 +9,8 @@ from inventory_core import (
     async_get_status,
     async_update_item,
     async_delete_item,
+    async_transfer_item,
+    async_get_item_history,
 )
 
 
@@ -62,3 +64,24 @@ async def test_async_negative_quantity(adb):
         await async_issue_item(session, "good", -2, tenant_id=tenant_id)
     with pytest.raises(ValueError):
         await async_return_item(session, "good", -1, tenant_id=tenant_id)
+
+
+@pytest.mark.asyncio
+async def test_async_transfer_between_tenants(adb):
+    session, tenant_id = adb
+    dest = Tenant(name="dest")
+    session.add(dest)
+    await session.commit()
+    await session.refresh(dest)
+    await async_add_item(session, "widget", 5, threshold=0, tenant_id=tenant_id)
+    from_item, to_item = await async_transfer_item(
+        session,
+        "widget",
+        2,
+        from_tenant_id=tenant_id,
+        to_tenant_id=dest.id,
+    )
+    assert from_item.available == 3
+    assert to_item.available == 2
+    hist = await async_get_item_history(session, "widget", tenant_id)
+    assert hist[0].action == "transfer"

@@ -10,6 +10,8 @@ from inventory_core import (
     get_status,
     update_item,
     delete_item,
+    transfer_item,
+    get_item_history,
 )
 
 
@@ -78,3 +80,18 @@ def test_update_and_delete(db):
     delete_item(session, "smartphone", tenant_id=tenant_id)
     status = get_status(session, tenant_id=tenant_id, name="smartphone")
     assert status == {}
+
+
+def test_transfer_between_tenants(db):
+    session, tenant_id = db
+    dest = Tenant(name="dest")
+    session.add(dest)
+    session.commit()
+    add_item(session, "widget", 5, threshold=0, tenant_id=tenant_id)
+    from_item, to_item = transfer_item(
+        session, "widget", 2, from_tenant_id=tenant_id, to_tenant_id=dest.id
+    )
+    assert from_item.available == 3
+    assert to_item.available == 2
+    history = get_item_history(session, "widget", tenant_id)
+    assert history[0].action == "transfer"

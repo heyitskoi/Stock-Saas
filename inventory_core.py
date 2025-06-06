@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -145,6 +145,22 @@ def get_recent_logs(
     return query.order_by(AuditLog.timestamp.desc()).limit(limit).all()
 
 
+def get_item_history(
+    db: Session, name: str, tenant_id: int, limit: int = 100
+) -> List[AuditLog]:
+    """Return audit log entries for a specific item."""
+    item = db.query(Item).filter(Item.name == name, Item.tenant_id == tenant_id).first()
+    if not item:
+        return []
+    return (
+        db.query(AuditLog)
+        .filter(AuditLog.item_id == item.id)
+        .order_by(AuditLog.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+
+
 def update_item(
     db: Session,
     name: str,
@@ -185,6 +201,51 @@ def delete_item(
     _log_action(db, user_id, item, "delete", 0)
     db.delete(item)
     db.commit()
+
+
+def transfer_item(
+    db: Session,
+    name: str,
+    qty: int,
+    from_tenant_id: int,
+    to_tenant_id: int,
+    user_id: Optional[int] = None,
+) -> Tuple[Item, Item]:
+    """Move stock between tenants and log the transfer."""
+    if qty <= 0:
+        raise ValueError("Quantity must be positive")
+
+    from_item = (
+        db.query(Item)
+        .filter(Item.name == name, Item.tenant_id == from_tenant_id)
+        .first()
+    )
+    if not from_item or from_item.available < qty:
+        raise ValueError("Not enough stock to transfer")
+
+    to_item = (
+        db.query(Item).filter(Item.name == name, Item.tenant_id == to_tenant_id).first()
+    )
+    if not to_item:
+        to_item = Item(
+            name=name,
+            tenant_id=to_tenant_id,
+            available=0,
+            in_use=0,
+            threshold=from_item.threshold,
+        )
+        db.add(to_item)
+
+    from_item.available -= qty
+    to_item.available += qty
+
+    _log_action(db, user_id, from_item, "transfer", qty)
+    _log_action(db, user_id, to_item, "transfer", qty)
+
+    db.commit()
+    db.refresh(from_item)
+    db.refresh(to_item)
+    return from_item, to_item
 
 
 async def async_add_item(
@@ -312,6 +373,24 @@ async def async_get_recent_logs(
     return result.scalars().all()
 
 
+async def async_get_item_history(
+    db: AsyncSession, name: str, tenant_id: int, limit: int = 100
+) -> List[AuditLog]:
+    result = await db.execute(
+        select(Item).where(Item.name == name, Item.tenant_id == tenant_id)
+    )
+    item = result.scalars().first()
+    if not item:
+        return []
+    result = await db.execute(
+        select(AuditLog)
+        .where(AuditLog.item_id == item.id)
+        .order_by(AuditLog.timestamp.desc())
+        .limit(limit)
+    )
+    return result.scalars().all()
+
+
 async def async_update_item(
     db: AsyncSession,
     name: str,
@@ -356,3 +435,48 @@ async def async_delete_item(
     await _async_log_action(db, user_id, item, "delete", 0)
     await db.delete(item)
     await db.commit()
+
+
+async def async_transfer_item(
+    db: AsyncSession,
+    name: str,
+    qty: int,
+    from_tenant_id: int,
+    to_tenant_id: int,
+    user_id: Optional[int] = None,
+) -> Tuple[Item, Item]:
+    """Asynchronously move stock between tenants."""
+    if qty <= 0:
+        raise ValueError("Quantity must be positive")
+
+    result = await db.execute(
+        select(Item).where(Item.name == name, Item.tenant_id == from_tenant_id)
+    )
+    from_item = result.scalars().first()
+    if not from_item or from_item.available < qty:
+        raise ValueError("Not enough stock to transfer")
+
+    result = await db.execute(
+        select(Item).where(Item.name == name, Item.tenant_id == to_tenant_id)
+    )
+    to_item = result.scalars().first()
+    if not to_item:
+        to_item = Item(
+            name=name,
+            tenant_id=to_tenant_id,
+            available=0,
+            in_use=0,
+            threshold=from_item.threshold,
+        )
+        db.add(to_item)
+
+    from_item.available -= qty
+    to_item.available += qty
+
+    await _async_log_action(db, user_id, from_item, "transfer", qty)
+    await _async_log_action(db, user_id, to_item, "transfer", qty)
+
+    await db.commit()
+    await db.refresh(from_item)
+    await db.refresh(to_item)
+    return from_item, to_item

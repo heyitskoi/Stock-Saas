@@ -2,9 +2,11 @@ from tests.conftest import get_token
 
 
 def test_multi_tenant_isolation(client):
-    from tests.factories import _session
     from models import Tenant, User
     from auth import get_password_hash
+    import database
+
+    _session = database.SessionLocal()
 
     tenant2 = Tenant(name="second")
     _session.add(tenant2)
@@ -187,3 +189,47 @@ def test_export_csv_pending(client):
         assert resp.status_code == 202
     finally:
         analytics._generate_csv = original
+
+
+def test_transfer_endpoint_and_history(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    from models import Tenant
+    import database
+
+    _session = database.SessionLocal()
+
+    dest = Tenant(name="dest")
+    _session.add(dest)
+    _session.commit()
+    _session.refresh(dest)
+
+    client.post(
+        "/items/add",
+        json={"name": "widget", "quantity": 5, "threshold": 0, "tenant_id": 1},
+        headers=headers,
+    )
+
+    resp = client.post(
+        "/items/transfer",
+        json={
+            "name": "widget",
+            "quantity": 2,
+            "from_tenant_id": 1,
+            "to_tenant_id": dest.id,
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["from_item"]["available"] == 3
+    assert data["to_item"]["available"] == 2
+
+    hist = client.get(
+        "/items/history",
+        params={"name": "widget", "tenant_id": 1},
+        headers=headers,
+    )
+    assert hist.status_code == 200
+    assert hist.json()[0]["action"] == "transfer"
