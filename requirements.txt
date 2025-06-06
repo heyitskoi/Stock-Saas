@@ -16,3 +16,4 @@ alembic
 python-dotenv
 pytest
 pydantic-settings
+PyYAML>=6.0.1
