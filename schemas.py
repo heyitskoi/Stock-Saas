@@ -93,3 +93,12 @@ class TenantResponse(TenantBase):
 
     class Config:
         orm_mode = True
+
+
+class PasswordResetRequest(BaseModel):
+    username: str
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str
