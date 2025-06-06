@@ -44,7 +44,7 @@
     "@radix-ui/react-toast": "latest",
     "@radix-ui/react-toggle": "latest",
     "@radix-ui/react-toggle-group": "latest",
-    "@radix-ui/react-tooltip": "latest"
+    "@radix-ui/react-tooltip": "latest",
 
     "clsx": "^2.1.0",
     "tailwind-merge": "^2.2.1"
