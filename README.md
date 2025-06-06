@@ -251,8 +251,7 @@ this step.
 ## User registration
 
 New users can sign up via the `/register` page in the Next.js frontend. The form
-submits to `/api/auth/register` which proxies to the FastAPI endpoint
-`/auth/register`. When departments exist the page lets users choose one; otherwise
+submits directly to the FastAPI endpoint `/auth/register`. When departments exist the page lets users choose one; otherwise
 a tenant is created automatically. On success the user is redirected to the login
 screen.
 
