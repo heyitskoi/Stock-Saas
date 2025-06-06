@@ -32,7 +32,23 @@ def db():
 
 def test_add_issue_return(db):
     session, tenant_id = db
-    item = add_item(session, "widget", 5, threshold=2, tenant_id=tenant_id)
+    item = add_item(
+        session,
+        "widget",
+        5,
+        threshold=2,
+        min_par=3,
+        department_id=1,
+        category_id=2,
+        stock_code="ABC",
+        status="active",
+        tenant_id=tenant_id,
+    )
+    assert item.min_par == 3
+    assert item.department_id == 1
+    assert item.category_id == 2
+    assert item.stock_code == "ABC"
+    assert item.status == "active"
     assert item.available == 5
     assert item.in_use == 0
 
@@ -70,10 +86,24 @@ def test_update_and_delete(db):
     session, tenant_id = db
     add_item(session, "phone", 2, threshold=1, tenant_id=tenant_id)
     item = update_item(
-        session, "phone", tenant_id=tenant_id, new_name="smartphone", threshold=5
+        session,
+        "phone",
+        tenant_id=tenant_id,
+        new_name="smartphone",
+        threshold=5,
+        min_par=4,
+        department_id=2,
+        category_id=3,
+        stock_code="XYZ",
+        status="inactive",
     )
     assert item.name == "smartphone"
     assert item.threshold == 5
+    assert item.min_par == 4
+    assert item.department_id == 2
+    assert item.category_id == 3
+    assert item.stock_code == "XYZ"
+    assert item.status == "inactive"
 
     delete_item(session, "smartphone", tenant_id=tenant_id)
     status = get_status(session, tenant_id=tenant_id, name="smartphone")

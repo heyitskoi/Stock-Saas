@@ -113,7 +113,13 @@ def test_websocket_receives_inventory_updates(client):
     with client.websocket_connect("/ws/inventory/1") as ws:
         resp = client.post(
             "/items/add",
-            json={"name": "ws-item", "quantity": 1, "threshold": 0, "tenant_id": 1},
+            json={
+                "name": "ws-item",
+                "quantity": 1,
+                "threshold": 0,
+                "min_par": 0,
+                "tenant_id": 1,
+            },
             headers=headers,
         )
         assert resp.status_code == 200

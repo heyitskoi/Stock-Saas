@@ -38,6 +38,11 @@ def add_item(
     qty: int,
     threshold: int,
     tenant_id: int,
+    min_par: int = 0,
+    department_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    stock_code: Optional[str] = None,
+    status: Optional[str] = None,
     user_id: Optional[int] = None,
 ) -> Item:
     if qty <= 0:
@@ -52,12 +57,27 @@ def add_item(
             available=0,
             in_use=0,
             threshold=threshold,
+            min_par=min_par,
+            department_id=department_id,
+            category_id=category_id,
+            stock_code=stock_code,
+            status=status,
         )
         db.add(item)
 
     item.available += qty
     if threshold is not None:
         item.threshold = threshold
+    if min_par is not None:
+        item.min_par = min_par
+    if department_id is not None:
+        item.department_id = department_id
+    if category_id is not None:
+        item.category_id = category_id
+    if stock_code is not None:
+        item.stock_code = stock_code
+    if status is not None:
+        item.status = status
 
     db.flush()
     _log_action(db, user_id, item, "add", qty)
@@ -123,6 +143,11 @@ def get_status(
                 "available": item.available,
                 "in_use": item.in_use,
                 "threshold": item.threshold,
+                "min_par": item.min_par,
+                "department_id": item.department_id,
+                "category_id": item.category_id,
+                "stock_code": item.stock_code,
+                "status": item.status,
             }
     else:
         for item in base_query.all():
@@ -130,6 +155,11 @@ def get_status(
                 "available": item.available,
                 "in_use": item.in_use,
                 "threshold": item.threshold,
+                "min_par": item.min_par,
+                "department_id": item.department_id,
+                "category_id": item.category_id,
+                "stock_code": item.stock_code,
+                "status": item.status,
             }
 
     return items
@@ -151,6 +181,11 @@ def update_item(
     tenant_id: int,
     new_name: Optional[str] = None,
     threshold: Optional[int] = None,
+    min_par: Optional[int] = None,
+    department_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    stock_code: Optional[str] = None,
+    status: Optional[str] = None,
     user_id: Optional[int] = None,
 ) -> Item:
     """Update an item's name and/or threshold."""
@@ -164,6 +199,66 @@ def update_item(
         if threshold < 0:
             raise ValueError("Threshold cannot be negative")
         item.threshold = threshold
+    if min_par is not None:
+        if min_par < 0:
+            raise ValueError("min_par cannot be negative")
+        item.min_par = min_par
+    if department_id is not None:
+        item.department_id = department_id
+    if category_id is not None:
+        item.category_id = category_id
+    if stock_code is not None:
+        item.stock_code = stock_code
+    if status is not None:
+        item.status = status
+    if min_par is not None:
+        if min_par < 0:
+            raise ValueError("min_par cannot be negative")
+        item.min_par = min_par
+    if department_id is not None:
+        item.department_id = department_id
+    if category_id is not None:
+        item.category_id = category_id
+    if stock_code is not None:
+        item.stock_code = stock_code
+    if status is not None:
+        item.status = status
+    if min_par is not None:
+        if min_par < 0:
+            raise ValueError("min_par cannot be negative")
+        item.min_par = min_par
+    if department_id is not None:
+        item.department_id = department_id
+    if category_id is not None:
+        item.category_id = category_id
+    if stock_code is not None:
+        item.stock_code = stock_code
+    if status is not None:
+        item.status = status
+    if min_par is not None:
+        if min_par < 0:
+            raise ValueError("min_par cannot be negative")
+        item.min_par = min_par
+    if department_id is not None:
+        item.department_id = department_id
+    if category_id is not None:
+        item.category_id = category_id
+    if stock_code is not None:
+        item.stock_code = stock_code
+    if status is not None:
+        item.status = status
+    if min_par is not None:
+        if min_par < 0:
+            raise ValueError("min_par cannot be negative")
+        item.min_par = min_par
+    if department_id is not None:
+        item.department_id = department_id
+    if category_id is not None:
+        item.category_id = category_id
+    if stock_code is not None:
+        item.stock_code = stock_code
+    if status is not None:
+        item.status = status
 
     _log_action(db, user_id, item, "update", 0)
     db.commit()
@@ -193,6 +288,11 @@ async def async_add_item(
     qty: int,
     threshold: int,
     tenant_id: int,
+    min_par: int = 0,
+    department_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    stock_code: Optional[str] = None,
+    status: Optional[str] = None,
     user_id: Optional[int] = None,
 ) -> Item:
     if qty <= 0:
@@ -210,12 +310,27 @@ async def async_add_item(
             available=0,
             in_use=0,
             threshold=threshold,
+            min_par=min_par,
+            department_id=department_id,
+            category_id=category_id,
+            stock_code=stock_code,
+            status=status,
         )
         db.add(item)
 
     item.available += qty
     if threshold is not None:
         item.threshold = threshold
+    if min_par is not None:
+        item.min_par = min_par
+    if department_id is not None:
+        item.department_id = department_id
+    if category_id is not None:
+        item.category_id = category_id
+    if stock_code is not None:
+        item.stock_code = stock_code
+    if status is not None:
+        item.status = status
 
     await db.flush()
     await _async_log_action(db, user_id, item, "add", qty)
@@ -288,6 +403,11 @@ async def async_get_status(
                 "available": item.available,
                 "in_use": item.in_use,
                 "threshold": item.threshold,
+                "min_par": item.min_par,
+                "department_id": item.department_id,
+                "category_id": item.category_id,
+                "stock_code": item.stock_code,
+                "status": item.status,
             }
     else:
         result = await db.execute(stmt)
@@ -296,6 +416,11 @@ async def async_get_status(
                 "available": item.available,
                 "in_use": item.in_use,
                 "threshold": item.threshold,
+                "min_par": item.min_par,
+                "department_id": item.department_id,
+                "category_id": item.category_id,
+                "stock_code": item.stock_code,
+                "status": item.status,
             }
 
     return items
@@ -318,6 +443,11 @@ async def async_update_item(
     tenant_id: int,
     new_name: Optional[str] = None,
     threshold: Optional[int] = None,
+    min_par: Optional[int] = None,
+    department_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    stock_code: Optional[str] = None,
+    status: Optional[str] = None,
     user_id: Optional[int] = None,
 ) -> Item:
     result = await db.execute(
@@ -333,6 +463,18 @@ async def async_update_item(
         if threshold < 0:
             raise ValueError("Threshold cannot be negative")
         item.threshold = threshold
+    if min_par is not None:
+        if min_par < 0:
+            raise ValueError("min_par cannot be negative")
+        item.min_par = min_par
+    if department_id is not None:
+        item.department_id = department_id
+    if category_id is not None:
+        item.category_id = category_id
+    if stock_code is not None:
+        item.stock_code = stock_code
+    if status is not None:
+        item.status = status
 
     await _async_log_action(db, user_id, item, "update", 0)
     await db.commit()

@@ -143,6 +143,11 @@ async def api_add_item(
         payload.quantity,
         payload.threshold,
         payload.tenant_id,
+        payload.min_par,
+        payload.department_id,
+        payload.category_id,
+        payload.stock_code,
+        payload.status,
         user_id=user.id,
     )
     asyncio.create_task(
@@ -301,6 +306,11 @@ async def api_update_item(
             tenant_id=payload.tenant_id,
             new_name=payload.new_name,
             threshold=payload.threshold,
+            min_par=payload.min_par,
+            department_id=payload.department_id,
+            category_id=payload.category_id,
+            stock_code=payload.stock_code,
+            status=payload.status,
             user_id=user.id,
         )
         asyncio.create_task(

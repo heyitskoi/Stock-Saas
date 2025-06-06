@@ -7,6 +7,11 @@ class ItemBase(BaseModel):
     available: int
     in_use: int
     threshold: int
+    min_par: int
+    department_id: int | None = None
+    category_id: int | None = None
+    stock_code: str | None = None
+    status: str | None = None
 
 
 class ItemCreate(BaseModel):
@@ -14,6 +19,11 @@ class ItemCreate(BaseModel):
     quantity: conint(gt=0)
     threshold: conint(ge=0) = 0
     tenant_id: int
+    min_par: conint(ge=0) = 0
+    department_id: int | None = None
+    category_id: int | None = None
+    stock_code: str | None = None
+    status: str | None = None
 
 
 class ItemUpdate(BaseModel):
@@ -21,6 +31,11 @@ class ItemUpdate(BaseModel):
     tenant_id: int
     new_name: str | None = None
     threshold: conint(ge=0) | None = None
+    min_par: conint(ge=0) | None = None
+    department_id: int | None = None
+    category_id: int | None = None
+    stock_code: str | None = None
+    status: str | None = None
 
 
 class ItemDelete(BaseModel):

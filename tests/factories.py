@@ -40,6 +40,11 @@ class ItemFactory(BaseFactory):
     available = 0
     in_use = 0
     threshold = 0
+    min_par = 0
+    department_id = None
+    category_id = None
+    stock_code = None
+    status = None
 
 
 class AuditLogFactory(BaseFactory):

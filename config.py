@@ -1,12 +1,21 @@
 from functools import lru_cache
-from pydantic_settings import BaseSettings
-from pydantic import Field, ConfigDict
+try:
+    from pydantic_settings import BaseSettings  # type: ignore
+    from pydantic import Field, ConfigDict
+except Exception:  # fallback for pydantic v1
+    from pydantic import BaseSettings, Field
+    ConfigDict = None
 
 from secrets_manager import get_manager
 
 
 class Settings(BaseSettings):
-    model_config = ConfigDict(extra="ignore", env_file=".env")
+    if ConfigDict is not None:
+        model_config = ConfigDict(extra="ignore", env_file=".env")
+    else:
+        class Config:
+            extra = "ignore"
+            env_file = ".env"
     database_url: str = Field("sqlite:///./inventory.db", env="DATABASE_URL")
     secret_key: str | None = Field(None, env="SECRET_KEY")
     secret_store_file: str | None = Field(None, env="SECRET_STORE_FILE")
