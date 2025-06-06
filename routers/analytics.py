@@ -8,7 +8,7 @@ from fastapi import (
 from inventory_core import get_recent_logs
 from database import SessionLocal, get_db
 from sqlalchemy.orm import Session
-from auth import require_role
+from auth import require_role, ensure_tenant
 import csv
 from io import StringIO
 from models import User, AuditLog, Item
@@ -89,6 +89,7 @@ def export_audit_csv(
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
+    ensure_tenant(user, tenant_id)
     csv_data = _build_csv(db, limit, tenant_id)
     return Response(content=csv_data, media_type="text/csv")
 
@@ -103,6 +104,7 @@ def start_audit_export(
     limit: int = 100,
     user: User = Depends(admin_or_manager),
 ):
+    ensure_tenant(user, tenant_id)
     task_id = str(uuid.uuid4())
     export_tasks[task_id] = None
     background_tasks.add_task(_generate_csv, limit, tenant_id, task_id)
@@ -158,6 +160,7 @@ def item_usage(
     )
 
     if params.tenant_id is not None:
+        ensure_tenant(user, params.tenant_id)
         query = query.filter(Item.tenant_id == params.tenant_id)
     if params.user_id is not None:
         query = query.filter(AuditLog.user_id == params.user_id)
@@ -226,6 +229,7 @@ def overall_usage(
     if params.item_name:
         query = query.join(Item).filter(Item.name == params.item_name)
     elif params.tenant_id is not None:
+        ensure_tenant(user, params.tenant_id)
         query = query.join(Item).filter(Item.tenant_id == params.tenant_id)
 
     if params.user_id is not None:

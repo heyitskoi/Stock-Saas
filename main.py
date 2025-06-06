@@ -23,7 +23,7 @@ from inventory_core import (
     async_update_item,
     async_delete_item,
 )
-from auth import login_for_access_token, require_role, get_password_hash
+from auth import login_for_access_token, require_role, get_password_hash, ensure_tenant
 from models import User, Tenant
 from schemas import (
     ItemCreate,
@@ -145,6 +145,7 @@ async def api_add_item(
     db: AsyncSession = Depends(get_async_db),
     user: User = Depends(admin_or_manager),
 ):
+    ensure_tenant(user, payload.tenant_id)
     item = await async_add_item(
         db,
         payload.name,
@@ -191,6 +192,7 @@ async def api_issue_item(
     db: AsyncSession = Depends(get_async_db),
     user: User = Depends(admin_or_manager),
 ):
+    ensure_tenant(user, payload.tenant_id)
     try:
         item = await async_issue_item(
             db,
@@ -234,6 +236,7 @@ async def api_return_item(
     db: AsyncSession = Depends(get_async_db),
     user: User = Depends(admin_or_manager),
 ):
+    ensure_tenant(user, payload.tenant_id)
     try:
         item = await async_return_item(
             db,
@@ -363,6 +366,7 @@ def api_get_status(
     db: Session = Depends(get_db),
     user: User = Depends(any_user),
 ):
+    ensure_tenant(user, tenant_id)
     data = get_status(db, tenant_id=tenant_id, name=name)
     if not data:
         raise HTTPException(
@@ -383,6 +387,7 @@ def api_get_audit_logs(
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
+    ensure_tenant(user, tenant_id)
     return get_recent_logs(db, limit, tenant_id)
 
 
@@ -398,6 +403,7 @@ def api_item_history(
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
+    ensure_tenant(user, tenant_id)
     return get_item_history(db, name, tenant_id, limit)
 
 
@@ -407,6 +413,7 @@ async def api_update_item(
     db: AsyncSession = Depends(get_async_db),
     user: User = Depends(admin_or_manager),
 ):
+    ensure_tenant(user, payload.tenant_id)
     try:
         item = await async_update_item(
             db,
@@ -456,6 +463,7 @@ async def api_delete_item(
     db: AsyncSession = Depends(get_async_db),
     user: User = Depends(admin_or_manager),
 ):
+    ensure_tenant(user, payload.tenant_id)
     try:
         await async_delete_item(
             db,
