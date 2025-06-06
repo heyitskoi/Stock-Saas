@@ -1,10 +1,13 @@
 from functools import lru_cache
 from pydantic import BaseSettings, Field
 
+from secrets_manager import get_manager
+
 
 class Settings(BaseSettings):
     database_url: str = Field("sqlite:///./inventory.db", env="DATABASE_URL")
-    secret_key: str = Field(..., env="SECRET_KEY")
+    secret_key: str | None = Field(None, env="SECRET_KEY")
+    secret_store_file: str | None = Field(None, env="SECRET_STORE_FILE")
     admin_username: str | None = Field(None, env="ADMIN_USERNAME")
     admin_password: str | None = Field(None, env="ADMIN_PASSWORD")
     next_public_api_url: str | None = Field(None, env="NEXT_PUBLIC_API_URL")
@@ -22,7 +25,16 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    if not settings.secret_key and settings.secret_store_file:
+        manager = get_manager(settings.secret_store_file)
+        if manager:
+            secret = manager.get_secret("SECRET_KEY")
+            if secret:
+                settings.secret_key = secret
+    if settings.secret_key is None:
+        settings.secret_key = "changeme"
+    return settings
 
 
 settings = get_settings()

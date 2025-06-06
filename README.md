@@ -23,10 +23,16 @@ below a configured threshold, a warning is displayed during the status check.
 
 ## Quickstart
 
+
+1. Copy `.env.example` to `.env` and adjust values. Set `SECRET_KEY` or
+   provide a `SECRET_STORE_FILE` path for the secrets manager. `DATABASE_URL`
+   defaults to SQLite but can be overridden.
+=======
 1. Copy `.env.example` to `.env` and adjust values. At a minimum set
    `SECRET_KEY`. `DATABASE_URL` defaults to SQLite but can be overridden.
    When running with `docker-compose` the backend container reads
    `SECRET_KEY` from this file.
+
    Optional settings include `ADMIN_USERNAME`, `ADMIN_PASSWORD`,
    `NEXT_PUBLIC_API_URL` for the frontend and background worker variables
    such as `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`, `SLACK_WEBHOOK_URL`,
@@ -68,7 +74,8 @@ Inventory data is stored in a SQLite database named `inventory.db` by default.
 Set `DATABASE_URL` to use a different database engine. The application reads all
 settings via `config.py` from environment variables defined in `.env`. Provide
 `ADMIN_USERNAME` and `ADMIN_PASSWORD` to specify the first admin user's
-credentials and ensure `SECRET_KEY` is set for signing JWT tokens.
+credentials. The application looks for `SECRET_KEY` in the environment and will
+fall back to the secret manager when `SECRET_STORE_FILE` is configured.
 
 
 ## Running the API
@@ -129,6 +136,16 @@ The `requirements.txt` file pins `httpx` to `0.27.*` to remain compatible with
 `starlette==0.27.0`.
 
 The tests use an in-memory SQLite database so they will not modify any local data files.
+
+## External secret manager
+
+When `SECRET_STORE_FILE` is defined, `config.py` loads `SECRET_KEY` from the
+specified JSON file if the environment variable is missing. Rotate the key using
+the helper script:
+
+```bash
+python scripts/rotate_secret.py --store path/to/secrets.json
+```
 ### Example requests
 
 Each item endpoint expects a JSON body matching the `ItemCreate` schema:
