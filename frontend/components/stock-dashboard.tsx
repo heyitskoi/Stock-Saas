@@ -22,6 +22,8 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/comp
 import { Button } from "@/components/ui/button"
 import { apiFetch, apiPost, apiGet } from "@/lib/api"
 
+const isDev = process.env.NODE_ENV === "development"
+
 // Sample data
 const sampleDepartments: Department[] = [
   { id: 1, name: "Systems", icon: "Computer" },
@@ -127,16 +129,13 @@ const sampleDepartmentStock: DepartmentStock[] = sampleItems.map((item) => ({
   quantity: item.quantity,
 }))
 
-// Initialize stock history
-const sampleStockHistory: StockHistoryEntry[] = []
-
 export function StockDashboard() {
   const { toast } = useToast()
-  const [departments, setDepartments] = useState<Department[]>(sampleDepartments)
-  const [categories, setCategories] = useState<Category[]>(sampleCategories)
-  const [items, setItems] = useState<StockItem[]>(sampleItems)
-  const [departmentStock, setDepartmentStock] = useState<DepartmentStock[]>(sampleDepartmentStock)
-  const [stockHistory, setStockHistory] = useState<StockHistoryEntry[]>(sampleStockHistory)
+  const [departments, setDepartments] = useState<Department[]>(isDev ? sampleDepartments : [])
+  const [categories, setCategories] = useState<Category[]>(isDev ? sampleCategories : [])
+  const [items, setItems] = useState<StockItem[]>(isDev ? sampleItems : [])
+  const [departmentStock, setDepartmentStock] = useState<DepartmentStock[]>(isDev ? sampleDepartmentStock : [])
+  const [stockHistory, setStockHistory] = useState<StockHistoryEntry[]>([])
   const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterOptions, setFilterOptions] = useState({
@@ -226,23 +225,24 @@ export function StockDashboard() {
     // Empty dependency array ensures this only runs once on component mount
   }, []);
 
-  // Load items from localStorage on mount
+  // Fetch items on mount
   useEffect(() => {
-    const stored = localStorage.getItem("stock-items")
-    if (stored) {
+    const loadItems = async () => {
       try {
-        const parsedItems = JSON.parse(stored)
-        setItems(parsedItems)
-      } catch (error) {
-        console.error("Failed to parse stored items:", error)
+        setIsLoading(prev => ({ ...prev, items: true }))
+        const data = await apiGet<StockItem[]>("/items/status")
+        if (Array.isArray(data)) {
+          setItems(data)
+        }
+      } catch (err) {
+        console.error("Failed to fetch items", err)
+        if (isDev) setItems(sampleItems)
+      } finally {
+        setIsLoading(prev => ({ ...prev, items: false }))
       }
     }
+    loadItems()
   }, [])
-
-  // Persist items to localStorage
-  useEffect(() => {
-    localStorage.setItem("stock-items", JSON.stringify(items))
-  }, [items])
 
   // Filter items based on search term and filter options
   const filteredItems = items.filter((item) => {
@@ -308,29 +308,37 @@ export function StockDashboard() {
     setAddEditItemOpen(true);
   }
 
-  const handleAddEditItemSubmit = (itemData: Omit<StockItem, "id">) => {
+  const handleAddEditItemSubmit = async (itemData: Omit<StockItem, "id">) => {
     if (addEditInitialItem) {
-      // Edit mode
-      setItems(items.map((item) =>
-        item.id === addEditInitialItem.id ? { ...item, ...itemData } : item
-      ));
-      toast({
-        title: "Item Updated",
-        description: `Item '${itemData.name}' has been updated.`,
-      });
+      try {
+        const updated = await apiFetch<StockItem>("/api/items/update", {
+          method: "PUT",
+          body: { id: addEditInitialItem.id, ...itemData },
+        })
+        setItems(items.map((item) => item.id === updated.id ? updated : item))
+        toast({
+          title: "Item Updated",
+          description: `Item '${itemData.name}' has been updated.`,
+        })
+      } catch (err) {
+        console.error("update item failed", err)
+      }
     } else {
-      // Add mode
-      const newId = Math.max(...items.map(item => item.id), 0) + 1;
-      setItems([
-        ...items,
-        { ...itemData, id: newId },
-      ]);
-      toast({
-        title: "Item Added",
-        description: `New item '${itemData.name}' added to ${getCategoryName(itemData.category_id)}.`,
-      });
+      try {
+        const created = await apiFetch<StockItem>("/api/items/add", {
+          method: "POST",
+          body: itemData,
+        })
+        setItems([...items, created])
+        toast({
+          title: "Item Added",
+          description: `New item '${created.name}' added to ${getCategoryName(created.category_id)}.`,
+        })
+      } catch (err) {
+        console.error("add item failed", err)
+      }
     }
-    setAddEditItemOpen(false);
+    setAddEditItemOpen(false)
   }
 
   const handleAddDepartment = () => {
@@ -344,7 +352,7 @@ export function StockDashboard() {
     }
 
     try {
-      const response = await apiPost<Department>('/departments/', {
+      const response = await apiPost<Department>('/api/departments/', {
         name: newDepartmentName,
         icon: newDepartmentIcon || "Computer"
       });
@@ -720,27 +728,21 @@ export function StockDashboard() {
     setDeleteConfirmOpen(true)
   }
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deleteType === "department") {
-      // Delete department
+      await apiFetch(`/api/departments/${deleteId}`, { method: "DELETE" })
       setDepartments(departments.filter((dept) => dept.id !== deleteId))
-
-      // Also delete associated categories
       setCategories(categories.filter((cat) => cat.department_id !== deleteId))
-
-      // Reset selected department if it was deleted
       if (selectedDepartment === deleteId) {
         setSelectedDepartment(null)
       }
-
       toast({
         title: "Department Deleted",
         description: "Department and its categories have been removed",
       })
     } else {
-      // Delete category
+      await apiFetch(`/api/categories/${deleteId}`, { method: "DELETE" })
       setCategories(categories.filter((cat) => cat.id !== deleteId))
-
       toast({
         title: "Category Deleted",
         description: "Category has been removed",
@@ -748,21 +750,27 @@ export function StockDashboard() {
     }
   }
 
-  const handleSaveDepartment = (updatedDepartment: Department) => {
-    setDepartments(departments.map((dept) => (dept.id === updatedDepartment.id ? updatedDepartment : dept)))
-
+  const handleSaveDepartment = async (updatedDepartment: Department) => {
+    const res = await apiFetch<Department>(`/api/departments/${updatedDepartment.id}`, {
+      method: "PUT",
+      body: updatedDepartment,
+    })
+    setDepartments(departments.map((dept) => (dept.id === res.id ? res : dept)))
     toast({
       title: "Department Updated",
-      description: `${updatedDepartment.name} has been updated`,
+      description: `${res.name} has been updated`,
     })
   }
 
-  const handleSaveCategory = (updatedCategory: Category) => {
-    setCategories(categories.map((cat) => (cat.id === updatedCategory.id ? updatedCategory : cat)))
-
+  const handleSaveCategory = async (updatedCategory: Category) => {
+    const res = await apiFetch<Category>(`/api/categories/${updatedCategory.id}`, {
+      method: "PUT",
+      body: updatedCategory,
+    })
+    setCategories(categories.map((cat) => (cat.id === res.id ? res : cat)))
     toast({
       title: "Category Updated",
-      description: `${updatedCategory.name} has been updated`,
+      description: `${res.name} has been updated`,
     })
   }
 
@@ -797,11 +805,14 @@ export function StockDashboard() {
     });
   }
 
-  const handleConfirmDeleteItem = () => {
+  const handleConfirmDeleteItem = async () => {
     if (!deleteItem) return;
-    
-    // Ensure we're properly handling the item deletion
+
     try {
+      await apiFetch("/api/items/delete", {
+        method: "DELETE",
+        body: { id: deleteItem.id },
+      })
       setItems(items.filter((item) => item.id !== deleteItem.id));
       
       // Add to stock history
