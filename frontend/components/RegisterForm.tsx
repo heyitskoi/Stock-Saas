@@ -21,7 +21,7 @@ export default function RegisterForm() {
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const data = await apiGet<Department[]>('/api/departments/public');
+        const data = await apiGet<Department[]>('/departments/public');
         setDepartments(data);
         setShowDepartments(true);
       } catch (err) {
@@ -47,7 +47,7 @@ export default function RegisterForm() {
     setIsLoading(true);
 
     try {
-      await apiPost('/api/auth/register', {
+      await apiPost('/auth/register', {
         email,
         password,
         department_id: showDepartments && departmentId ? departmentId : null,
