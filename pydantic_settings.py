@@ -1,4 +1,3 @@
-from pydantic import BaseSettings as _BaseSettings
+from pydantic import BaseSettings
 
-class BaseSettings(_BaseSettings):
-    pass
+__all__ = ["BaseSettings"]

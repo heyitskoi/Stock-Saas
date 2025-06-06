@@ -1,6 +1,5 @@
 from tests.conftest import get_token
 
-
 def test_multi_tenant_isolation(client):
     from models import Tenant, User
     from auth import get_password_hash
@@ -76,7 +75,6 @@ def test_multi_tenant_isolation(client):
     assert all(log["item_id"] in t1_ids for log in logs1)
     assert all(log["item_id"] in t2_ids for log in logs2)
 
-
 def test_update_item_not_found(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
@@ -86,7 +84,6 @@ def test_update_item_not_found(client):
         headers=headers,
     )
     assert resp.status_code == 404
-
 
 def test_delete_item_not_found(client):
     token = get_token(client)
@@ -98,7 +95,6 @@ def test_delete_item_not_found(client):
         headers=headers,
     )
     assert resp.status_code == 404
-
 
 def test_create_user_duplicate_username(client):
     token = get_token(client)
@@ -114,7 +110,6 @@ def test_create_user_duplicate_username(client):
     assert first.status_code == 200
     second = client.post("/users/", json=payload, headers=headers)
     assert second.status_code == 400
-
 
 def test_update_user_duplicate_username(client):
     token = get_token(client)
@@ -149,7 +144,6 @@ def test_update_user_duplicate_username(client):
     )
     assert resp.status_code == 400
 
-
 def test_delete_user_not_found(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
@@ -161,20 +155,17 @@ def test_delete_user_not_found(client):
     )
     assert resp.status_code == 404
 
-
 def test_export_csv_not_found(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
     resp = client.get("/analytics/audit/export/doesnotexist", headers=headers)
     assert resp.status_code == 404
 
-
 def test_export_csv_pending(client):
     token = get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
     from routers import analytics
 
-    # Prevent background task from completing immediately
     original = analytics._generate_csv
     analytics._generate_csv = lambda limit, tenant_id, task_id: None
     try:
@@ -189,7 +180,6 @@ def test_export_csv_pending(client):
         assert resp.status_code == 202
     finally:
         analytics._generate_csv = original
-
 
 def test_transfer_endpoint_and_history(client):
     token = get_token(client)
@@ -233,3 +223,27 @@ def test_transfer_endpoint_and_history(client):
     )
     assert hist.status_code == 200
     assert hist.json()[0]["action"] == "transfer"
+
+def test_register_success(client):
+    resp = client.post(
+        "/auth/register",
+        json={"email": "new@example.com", "password": "secret", "is_admin": False},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["username"] == "new@example.com"
+    assert data["tenant_id"]
+
+def test_register_duplicate_username(client):
+    payload = {"email": "dup@example.com", "password": "x"}
+    first = client.post("/auth/register", json=payload)
+    assert first.status_code == 200
+    second = client.post("/auth/register", json=payload)
+    assert second.status_code == 400
+
+def test_register_missing_department(client):
+    resp = client.post(
+        "/auth/register",
+        json={"email": "nodpt@example.com", "password": "pw", "department_id": 99},
+    )
+    assert resp.status_code == 404

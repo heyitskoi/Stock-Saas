@@ -37,6 +37,8 @@ from schemas import (
 from routers.users import router as users_router
 from routers.analytics import router as analytics_router
 from routers.auth import router as auth_router
+from routers.departments import router as departments_router
+from routers.categories import router as categories_router
 from websocket_manager import InventoryWSManager
 from rate_limiter import RateLimiter
 
@@ -77,6 +79,8 @@ Base.metadata.create_all(bind=engine)
 app.include_router(users_router)
 app.include_router(analytics_router)
 app.include_router(auth_router)
+app.include_router(departments_router)
+app.include_router(categories_router)
 
 
 @app.websocket("/ws/inventory/{tenant_id}")
