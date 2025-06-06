@@ -214,7 +214,14 @@ export async function getItemUsage(
 
 export async function getOverallUsage(
   token: string,
-  opts: { start?: string; end?: string; tenant_id?: number; days?: number } = {}
+  opts: {
+    start?: string;
+    end?: string;
+    tenant_id?: number;
+    days?: number;
+    item_name?: string;
+    user_id?: number;
+  } = {}
 ) {
   const params = new URLSearchParams();
   if (opts.days !== undefined) params.append('days', String(opts.days));
@@ -222,6 +229,9 @@ export async function getOverallUsage(
   if (opts.end) params.append('end_date', opts.end);
   if (opts.tenant_id !== undefined)
     params.append('tenant_id', String(opts.tenant_id));
+  if (opts.item_name) params.append('item_name', opts.item_name);
+  if (opts.user_id !== undefined)
+    params.append('user_id', String(opts.user_id));
 
   const res = await fetch(`${API_URL}/analytics/usage?${params.toString()}`, {
     headers: { Authorization: `Bearer ${token}` },

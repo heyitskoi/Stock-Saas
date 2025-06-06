@@ -383,6 +383,24 @@ def test_usage_endpoints(client):
     assert sum(e["issued"] for e in overall) >= 3
     assert sum(e["returned"] for e in overall) >= 1
 
+    filter_item_resp = client.get(
+        "/analytics/usage",
+        params={"tenant_id": 1, "days": 30, "item_name": item_name},
+        headers=headers,
+    )
+    assert filter_item_resp.status_code == 200
+    filtered = filter_item_resp.json()
+    assert sum(e["issued"] for e in filtered) == 3
+
+    filter_user_resp = client.get(
+        "/analytics/usage",
+        params={"tenant_id": 1, "days": 30, "user_id": 1},
+        headers=headers,
+    )
+    assert filter_user_resp.status_code == 200
+    user_filtered = filter_user_resp.json()
+    assert sum(e["issued"] for e in user_filtered) >= 3
+
 
 def test_token_rate_limiting(client):
     for _ in range(5):

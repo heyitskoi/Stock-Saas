@@ -13,6 +13,7 @@ import csv
 from io import StringIO
 from models import User, AuditLog, Item
 from datetime import datetime, timedelta
+from time import time
 import uuid
 
 router = APIRouter(prefix="/analytics")
@@ -22,6 +23,17 @@ admin_or_manager = require_role(["admin", "manager"])
 # In-memory store for export task results
 # {task_id: csv_data or None while still generating}
 export_tasks: dict[str, str | None] = {}
+
+# Simple in-memory cache for usage results
+# {key: (timestamp, data)}
+usage_cache: dict[tuple, tuple[float, list[dict]]] = {}
+CACHE_TTL = 300  # seconds
+
+def _get_cached_usage(key: tuple) -> list[dict] | None:
+    entry = usage_cache.get(key)
+    if entry and time() - entry[0] < CACHE_TTL:
+        return entry[1]
+    return None
 
 
 def _build_csv(db: Session, limit: int, tenant_id: int) -> str:
@@ -112,6 +124,7 @@ def item_usage(
     item_name: str,
     days: int = 30,
     tenant_id: int | None = None,
+    user_id: int | None = None,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     db: Session = Depends(get_db),
@@ -132,6 +145,20 @@ def item_usage(
     )
     if tenant_id is not None:
         query = query.filter(Item.tenant_id == tenant_id)
+    if user_id is not None:
+        query = query.filter(AuditLog.user_id == user_id)
+
+    cache_key = (
+        "item",
+        item_name,
+        tenant_id,
+        user_id,
+        since.isoformat(),
+        until.isoformat(),
+    )
+    cached = _get_cached_usage(cache_key)
+    if cached is not None:
+        return cached
 
     logs = (
         query.filter(AuditLog.timestamp >= since, AuditLog.timestamp <= until)
@@ -149,10 +176,12 @@ def item_usage(
         else:
             entry["returned"] += log.quantity
 
-    return [
+    result = [
         {"date": date, "issued": v["issued"], "returned": v["returned"]}
         for date, v in sorted(data.items())
     ]
+    usage_cache[cache_key] = (time(), result)
+    return result
 
 
 @router.get("/usage", summary="Aggregate issued/returned usage across all items")
@@ -161,6 +190,8 @@ def overall_usage(
     tenant_id: int | None = None,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
+    item_name: str | None = None,
+    user_id: int | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
@@ -173,8 +204,26 @@ def overall_usage(
         until = datetime.utcnow()
 
     query = db.query(AuditLog)
+    if item_name:
+        query = query.join(Item).filter(Item.name == item_name)
+    if user_id is not None:
+        query = query.filter(AuditLog.user_id == user_id)
     if tenant_id is not None:
-        query = query.join(Item).filter(Item.tenant_id == tenant_id)
+        if not item_name:
+            query = query.join(Item)
+        query = query.filter(Item.tenant_id == tenant_id)
+
+    cache_key = (
+        "overall",
+        tenant_id,
+        item_name,
+        user_id,
+        since.isoformat(),
+        until.isoformat(),
+    )
+    cached = _get_cached_usage(cache_key)
+    if cached is not None:
+        return cached
 
     logs = (
         query.filter(AuditLog.timestamp >= since, AuditLog.timestamp <= until)
@@ -192,7 +241,9 @@ def overall_usage(
         else:
             entry["returned"] += log.quantity
 
-    return [
+    result = [
         {"date": date, "issued": v["issued"], "returned": v["returned"]}
         for date, v in sorted(data.items())
     ]
+    usage_cache[cache_key] = (time(), result)
+    return result
