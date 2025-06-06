@@ -1,7 +1,14 @@
 import os
 import tempfile
 from fastapi.testclient import TestClient
+import httpx
 import pytest
+import inspect
+
+def _make_test_client(app):
+    if "transport" in inspect.signature(TestClient).parameters:
+        return TestClient(app, transport=httpx.WSGITransport(app))
+    return TestClient(app)
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
@@ -78,7 +85,7 @@ def client():
 
     main.app.dependency_overrides[database_async.get_async_db] = override_get_async_db
 
-    with TestClient(main.app) as c:
+    with _make_test_client(main.app) as c:
         if hasattr(main.app.state, "rate_limiter"):
             main.app.state.rate_limiter.attempts.clear()
         yield c
