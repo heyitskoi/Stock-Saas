@@ -52,6 +52,8 @@ def client():
         async with TestingAsyncSessionLocal() as adb:
             tenant = Tenant(name="default")
             adb.add(tenant)
+            second = Tenant(name="second")
+            adb.add(second)
             await adb.commit()
             await adb.refresh(tenant)
             admin = User(
