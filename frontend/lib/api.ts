@@ -1,63 +1,51 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-export function isAuthenticated(): boolean {
-  if (typeof window === 'undefined') return false;
-  return !!localStorage.getItem('token');
-}
+type ApiFetchOptions = RequestInit & { body?: any };
 
-interface ApiFetchOptions extends RequestInit {
-  /** body payload to be JSON stringified */
-  body?: any;
-}
+export const isAuthenticated = () =>
+  typeof window !== 'undefined' && !!localStorage.getItem('token');
 
 export async function apiFetch<T>(
   path: string,
-  options: ApiFetchOptions = {}
+  opts: ApiFetchOptions = {}
 ): Promise<T> {
-  const token =
-    typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const headers = new Headers(opts.headers || {});
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
-  const headers: Record<string, string> = {
-    ...(options.headers || {}),
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
   }
-  if (options.body && !(options.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
+
+  let body = opts.body;
+  if (body && typeof body === 'object' && !(body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+    body = JSON.stringify(body);
   }
 
   const res = await fetch(`${API_URL}${path}`, {
-    ...options,
+    ...opts,
     headers,
-    body:
-      options.body && !(options.body instanceof FormData)
-        ? JSON.stringify(options.body)
-        : options.body,
+    body,
   });
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `Request failed with status ${res.status}`);
+    throw new Error(text || res.statusText);
   }
 
-  // Some endpoints may return no content
-  if (res.status === 204) {
-    return null as unknown as T;
+  const contentType = res.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return res.json();
   }
 
-  return res.json() as Promise<T>;
+  return (await res.text()) as unknown as T;
 }
 
-export const apiPost = <T,>(
-  path: string,
-  body?: any,
-  options?: ApiFetchOptions
-) => apiFetch<T>(path, { method: 'POST', body, ...(options || {}) });
-
-export const apiGet = <T,>(path: string, options?: ApiFetchOptions) =>
+export const apiGet = <T>(path: string, options?: ApiFetchOptions) =>
   apiFetch<T>(path, { method: 'GET', ...(options || {}) });
+
+export const apiPost = <T>(path: string, body?: any, options?: ApiFetchOptions) =>
+  apiFetch<T>(path, { method: 'POST', body, ...(options || {}) });
 
 export async function login(username: string, password: string): Promise<string> {
   const res = await fetch(`${API_URL}/token`, {
@@ -67,31 +55,20 @@ export async function login(username: string, password: string): Promise<string>
     },
     body: new URLSearchParams({ username, password }),
   });
-
-  if (!res.ok) {
-    throw new Error('Login failed');
-  }
+  if (!res.ok) throw new Error('Login failed');
   const data = await res.json();
-  return data.access_token as string;
+  return data.access_token;
 }
 
 export async function getItems(token: string) {
   const res = await fetch(`${API_URL}/items/status`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
   });
-
-  if (!res.ok) {
-    throw new Error('Failed to load');
-  }
+  if (!res.ok) throw new Error('Failed to load');
   return res.json();
 }
 
-export async function addItem(
-  token: string,
-  item: { name: string; quantity: number; threshold: number }
-) {
+export async function addItem(token: string, item: { name: string; quantity: number; threshold: number }) {
   const res = await fetch(`${API_URL}/items/add`, {
     method: 'POST',
     headers: {
@@ -100,16 +77,11 @@ export async function addItem(
     },
     body: JSON.stringify(item),
   });
-  if (!res.ok) {
-    throw new Error('Failed to add item');
-  }
+  if (!res.ok) throw new Error('Failed to add item');
   return res.json();
 }
 
-export async function issueItem(
-  token: string,
-  item: { name: string; quantity: number; threshold: number }
-) {
+export async function issueItem(token: string, item: { name: string; quantity: number; threshold: number }) {
   const res = await fetch(`${API_URL}/items/issue`, {
     method: 'POST',
     headers: {
@@ -118,16 +90,11 @@ export async function issueItem(
     },
     body: JSON.stringify(item),
   });
-  if (!res.ok) {
-    throw new Error('Failed to issue item');
-  }
+  if (!res.ok) throw new Error('Failed to issue item');
   return res.json();
 }
 
-export async function returnItem(
-  token: string,
-  item: { name: string; quantity: number; threshold: number }
-) {
+export async function returnItem(token: string, item: { name: string; quantity: number; threshold: number }) {
   const res = await fetch(`${API_URL}/items/return`, {
     method: 'POST',
     headers: {
@@ -136,16 +103,11 @@ export async function returnItem(
     },
     body: JSON.stringify(item),
   });
-  if (!res.ok) {
-    throw new Error('Failed to return item');
-  }
+  if (!res.ok) throw new Error('Failed to return item');
   return res.json();
 }
 
-export async function updateItemApi(
-  token: string,
-  item: { name: string; new_name?: string; threshold?: number }
-) {
+export async function updateItemApi(token: string, item: { name: string; new_name?: string; threshold?: number }) {
   const res = await fetch(`${API_URL}/items/update`, {
     method: 'PUT',
     headers: {
@@ -154,9 +116,7 @@ export async function updateItemApi(
     },
     body: JSON.stringify(item),
   });
-  if (!res.ok) {
-    throw new Error('Failed to update item');
-  }
+  if (!res.ok) throw new Error('Failed to update item');
   return res.json();
 }
 
@@ -169,29 +129,19 @@ export async function deleteItem(token: string, name: string) {
     },
     body: JSON.stringify({ name }),
   });
-  if (!res.ok) {
-    throw new Error('Failed to delete item');
-  }
+  if (!res.ok) throw new Error('Failed to delete item');
   return res.json();
 }
 
 export async function exportAuditCSV(token: string, limit = 100): Promise<string> {
   const res = await fetch(`${API_URL}/analytics/audit/export?limit=${limit}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
   });
-
-  if (!res.ok) {
-    throw new Error('Failed to export CSV');
-  }
+  if (!res.ok) throw new Error('Failed to export CSV');
   return res.text();
 }
 
-export async function createUser(
-  token: string,
-  user: { username: string; password: string; role: string }
-) {
+export async function createUser(token: string, user: { username: string; password: string; role: string }) {
   const res = await fetch(`${API_URL}/users/`, {
     method: 'POST',
     headers: {
@@ -200,29 +150,19 @@ export async function createUser(
     },
     body: JSON.stringify(user),
   });
-  if (!res.ok) {
-    throw new Error('Failed to create user');
-  }
+  if (!res.ok) throw new Error('Failed to create user');
   return res.json();
 }
 
 export async function listUsers(token: string) {
   const res = await fetch(`${API_URL}/users/`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
   });
-
-  if (!res.ok) {
-    throw new Error('Failed to load users');
-  }
+  if (!res.ok) throw new Error('Failed to load users');
   return res.json();
 }
 
-export async function updateUser(
-  token: string,
-  user: { id: number; username?: string; password?: string; role?: string }
-) {
+export async function updateUser(token: string, user: { id: number; username?: string; password?: string; role?: string }) {
   const res = await fetch(`${API_URL}/users/update`, {
     method: 'PUT',
     headers: {
@@ -231,9 +171,7 @@ export async function updateUser(
     },
     body: JSON.stringify(user),
   });
-  if (!res.ok) {
-    throw new Error('Failed to update user');
-  }
+  if (!res.ok) throw new Error('Failed to update user');
   return res.json();
 }
 
@@ -246,28 +184,15 @@ export async function deleteUser(token: string, id: number) {
     },
     body: JSON.stringify({ id }),
   });
-  if (!res.ok) {
-    throw new Error('Failed to delete user');
-  }
+  if (!res.ok) throw new Error('Failed to delete user');
   return res.json();
 }
 
-export async function getItemUsage(
-  token: string,
-  name: string,
-  days = 30
-) {
-  const res = await fetch(
-    `${API_URL}/analytics/usage/${name}?days=${days}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-  if (!res.ok) {
-    throw new Error('Failed to load usage');
-  }
+export async function getItemUsage(token: string, name: string, days = 30) {
+  const res = await fetch(`${API_URL}/analytics/usage/${name}?days=${days}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('Failed to load usage');
   return res.json();
 }
 
@@ -286,17 +211,13 @@ export async function getOverallUsage(
   if (opts.days !== undefined) params.append('days', String(opts.days));
   if (opts.start) params.append('start_date', opts.start);
   if (opts.end) params.append('end_date', opts.end);
-  if (opts.tenant_id !== undefined)
-    params.append('tenant_id', String(opts.tenant_id));
+  if (opts.tenant_id !== undefined) params.append('tenant_id', String(opts.tenant_id));
   if (opts.item_name) params.append('item_name', opts.item_name);
-  if (opts.user_id !== undefined)
-    params.append('user_id', String(opts.user_id));
+  if (opts.user_id !== undefined) params.append('user_id', String(opts.user_id));
 
   const res = await fetch(`${API_URL}/analytics/usage?${params.toString()}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) {
-    throw new Error('Failed to load usage');
-  }
+  if (!res.ok) throw new Error('Failed to load usage');
   return res.json();
 }
