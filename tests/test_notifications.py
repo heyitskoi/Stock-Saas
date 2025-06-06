@@ -17,7 +17,13 @@ def setup_db():
 
 def test_notification_logs_created():
     db = setup_db()
-    item = Item(name="paper", available=0, in_use=0, threshold=1)
+    item = Item(
+        name="paper",
+        available=0,
+        in_use=0,
+        threshold=1,
+        min_par=0,
+    )
     db.add(item)
     db.commit()
 
@@ -65,7 +71,7 @@ def test_notification_logs_created():
 
 def test_no_notifications_when_stock_ok():
     db = setup_db()
-    item = Item(name="stapler", available=5, in_use=0, threshold=2)
+    item = Item(name="stapler", available=5, in_use=0, threshold=2, min_par=0)
     db.add(item)
     db.commit()
 
@@ -81,7 +87,14 @@ def test_no_notifications_when_stock_ok():
 
 def test_websocket_broadcast_on_low_stock():
     db = setup_db()
-    item = Item(name="ws", available=0, in_use=0, threshold=1, tenant_id=1)
+    item = Item(
+        name="ws",
+        available=0,
+        in_use=0,
+        threshold=1,
+        min_par=0,
+        tenant_id=1,
+    )
     db.add(item)
     db.commit()
 

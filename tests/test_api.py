@@ -32,13 +32,25 @@ def test_multi_tenant_isolation(client):
 
     client.post(
         "/items/add",
-        json={"name": "widget", "quantity": 2, "threshold": 0, "tenant_id": 1},
+        json={
+            "name": "widget",
+            "quantity": 2,
+            "threshold": 0,
+            "min_par": 0,
+            "tenant_id": 1,
+        },
         headers=h1,
     )
 
     client.post(
         "/items/add",
-        json={"name": "widget", "quantity": 5, "threshold": 0, "tenant_id": tenant2.id},
+        json={
+            "name": "widget",
+            "quantity": 5,
+            "threshold": 0,
+            "min_par": 0,
+            "tenant_id": tenant2.id,
+        },
         headers=h2,
     )
 
