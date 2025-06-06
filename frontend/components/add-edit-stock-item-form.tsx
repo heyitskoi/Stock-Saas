@@ -30,7 +30,8 @@ export function AddEditStockItemForm({
   const [quantity, setQuantity] = useState(0)
   const [minPar, setMinPar] = useState(1)
   const [stockCode, setStockCode] = useState("")
-  const [status, setStatus] = useState<"available" | "low" | "out">("available")
+  // Status is a simple string; allow any value returned by the API
+  const [status, setStatus] = useState<string>("available")
   const [departmentId, setDepartmentId] = useState<number>(departments[0]?.id ?? 0)
 
   useEffect(() => {
