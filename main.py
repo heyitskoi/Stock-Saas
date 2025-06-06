@@ -56,8 +56,11 @@ app = FastAPI(
 ws_manager = InventoryWSManager()
 
 # Configure CORS
-frontend_origin = settings.next_public_api_url
-origins = [frontend_origin] if frontend_origin else []
+origins_raw = settings.cors_allow_origins or settings.next_public_api_url
+if origins_raw:
+    origins = [o.strip() for o in origins_raw.split(",") if o.strip()]
+else:
+    origins = []
 if DATABASE_URL.startswith("sqlite"):
     origins = ["*"]
 

@@ -31,11 +31,12 @@ below a configured threshold, a warning is displayed during the status check.
 1. Copy `.env.example` to `.env` and adjust values. At a minimum set
    `SECRET_KEY`. `DATABASE_URL` defaults to SQLite but can be overridden.
    When running with `docker-compose` the backend container reads
-   `SECRET_KEY` from this file. Optional settings include `ADMIN_USERNAME`,
-   `ADMIN_PASSWORD`, `NEXT_PUBLIC_API_URL` for the frontend and background
-   worker variables such as `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`,
-   `SLACK_WEBHOOK_URL`, `SMTP_SERVER`, `ALERT_EMAIL_TO` and
-   `ALERT_EMAIL_FROM`. **Do not commit your `.env` file to version control as
+  `SECRET_KEY` from this file. Optional settings include `ADMIN_USERNAME`,
+  `ADMIN_PASSWORD`, `NEXT_PUBLIC_API_URL` for the frontend,
+  `CORS_ALLOW_ORIGINS` for allowed CORS origins and background
+  worker variables such as `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`,
+  `SLACK_WEBHOOK_URL`, `SMTP_SERVER`, `ALERT_EMAIL_TO` and
+  `ALERT_EMAIL_FROM`. **Do not commit your `.env` file to version control as
    it may contain secrets.**
 2. Install Python dependencies and start the API:
 
@@ -212,10 +213,11 @@ npm run dev
 
 The frontend expects the FastAPI backend to run on `http://localhost:8000`. If your API is available elsewhere set the environment variable `NEXT_PUBLIC_API_URL` before starting the dev server.
 
-The backend now enables CORS using FastAPI's `CORSMiddleware`. When the
+The backend enables CORS using FastAPI's `CORSMiddleware`. When the
 application runs with the default SQLite database (development mode), all
-origins are allowed. In other environments requests are only accepted from the
-origin specified in `NEXT_PUBLIC_API_URL`.
+origins are allowed. In other environments the list of allowed origins is
+read from the `CORS_ALLOW_ORIGINS` variable. If unset, it defaults to the value
+of `NEXT_PUBLIC_API_URL`.
 
 After logging in you will see the dashboard listing all items. Links are provided to pages for adding new stock, issuing items and recording returns. Each form uses the JWT token stored in `localStorage` to authenticate API requests.
 
