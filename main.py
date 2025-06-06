@@ -161,6 +161,18 @@ async def api_add_item(
             },
         )
     )
+    if item.threshold and item.available < item.threshold:
+        asyncio.create_task(
+            ws_manager.broadcast(
+                payload.tenant_id,
+                {
+                    "event": "low_stock",
+                    "item": item.name,
+                    "available": item.available,
+                    "threshold": item.threshold,
+                },
+            )
+        )
     return item
 
 
@@ -190,6 +202,18 @@ async def api_issue_item(
                 },
             )
         )
+        if item.threshold and item.available < item.threshold:
+            asyncio.create_task(
+                ws_manager.broadcast(
+                    payload.tenant_id,
+                    {
+                        "event": "low_stock",
+                        "item": item.name,
+                        "available": item.available,
+                        "threshold": item.threshold,
+                    },
+                )
+            )
         return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -221,6 +245,18 @@ async def api_return_item(
                 },
             )
         )
+        if item.threshold and item.available < item.threshold:
+            asyncio.create_task(
+                ws_manager.broadcast(
+                    payload.tenant_id,
+                    {
+                        "event": "low_stock",
+                        "item": item.name,
+                        "available": item.available,
+                        "threshold": item.threshold,
+                    },
+                )
+            )
         return item
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -283,6 +319,18 @@ async def api_update_item(
                 },
             )
         )
+        if item.threshold and item.available < item.threshold:
+            asyncio.create_task(
+                ws_manager.broadcast(
+                    payload.tenant_id,
+                    {
+                        "event": "low_stock",
+                        "item": item.name,
+                        "available": item.available,
+                        "threshold": item.threshold,
+                    },
+                )
+            )
         return item
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

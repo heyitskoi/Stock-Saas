@@ -2,6 +2,9 @@ import os
 import smtplib
 from email.message import EmailMessage
 from typing import Callable
+import asyncio
+
+from websocket_manager import InventoryWSManager
 
 import httpx
 from sqlalchemy.orm import Session
@@ -39,6 +42,7 @@ def check_thresholds(
     db: Session,
     email_func: Callable[[str, str | None], None] | None = _send_email,
     slack_func: Callable[[str], None] | None = _send_slack,
+    ws_manager: InventoryWSManager | None = None,
 ) -> None:
     low_items = (
         db.query(Item).filter(Item.threshold > 0, Item.available < Item.threshold).all()
@@ -57,6 +61,8 @@ def check_thresholds(
                 elif u.notification_preference == "slack" and slack_func:
                     slack_func(text)
                     record_notification(db, item, text, "slack")
+                elif u.notification_preference == "none":
+                    pass
         else:
             if email_func:
                 email_func(text, None)
@@ -64,4 +70,20 @@ def check_thresholds(
             if slack_func:
                 slack_func(text)
                 record_notification(db, item, text, "slack")
+        if ws_manager:
+            payload = {
+                "event": "low_stock",
+                "item": item.name,
+                "available": item.available,
+                "threshold": item.threshold,
+            }
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(ws_manager.broadcast(item.tenant_id, payload))
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                loop.run_until_complete(
+                    ws_manager.broadcast(item.tenant_id, payload)
+                )
+                loop.close()
     db.commit()
