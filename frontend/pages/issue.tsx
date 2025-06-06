@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { issueItem } from '../lib/api';
-import { useAuth } from '../lib/AuthContext';
+import { useAuth } from '@/lib/auth-context';
 
 export default function IssueItemPage() {
   const router = useRouter();
