@@ -17,5 +17,5 @@ docker-compose up --build -d
 
 # Display URLs
 echo "Services are starting..."
-echo "API: http://localhost"
+echo "API: http://localhost:8000"
 echo "Frontend: http://localhost:3000"

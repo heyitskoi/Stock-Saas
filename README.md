@@ -254,7 +254,7 @@ docker build -t stock-saas-backend .
 docker run -e SECRET_KEY=mysecret -p 8000:8000 stock-saas-backend
 ```
 
-To start the backend together with a PostgreSQL database, Nginx reverse proxy and the Next.js frontend use `docker-compose`. The compose file loads environment variables from `.env`, so ensure `SECRET_KEY` is set there:
+To start the backend together with a PostgreSQL database and the Next.js frontend use `docker-compose`. The compose file loads environment variables from `.env`, so ensure `SECRET_KEY` is set there:
 
 ```bash
 cp .env.example .env
@@ -265,10 +265,8 @@ docker-compose up --build
 Alternatively run `./scripts/quickstart.sh` to start all services.
 
 The compose file also starts Redis along with Celery worker and beat containers
-for background tasks. Nginx listens on port `80` and proxies `/api/` requests to
-the FastAPI container at `backend:8000` while all other paths are sent to the
-frontend at `frontend:3000`. You can therefore access the API on
-`http://localhost/api/` and the Next.js frontend on `http://localhost`.
+for background tasks. The API is available on `http://localhost:8000` and the
+Next.js frontend on `http://localhost:3000` when the containers are running.
 
 
 
