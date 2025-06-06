@@ -81,6 +81,12 @@ def require_role(required_roles):
     return role_dependency
 
 
+def ensure_tenant(user: User, tenant_id: int) -> None:
+    """Raise 403 if the authenticated user's tenant does not match."""
+    if user.tenant_id != tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
+
+
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     totp: str = Form(...),
