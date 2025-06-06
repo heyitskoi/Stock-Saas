@@ -7,7 +7,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   /** optional user object for role based checks */
   user: any | null;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, totp: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -30,8 +30,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = async (username: string, password: string) => {
-    const t = await apiLogin(username, password);
+  const login = async (username: string, password: string, totp: string) => {
+    const t = await apiLogin(username, password, totp);
     localStorage.setItem('token', t);
     setToken(t);
   };
