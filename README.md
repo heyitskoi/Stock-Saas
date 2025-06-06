@@ -212,6 +212,7 @@ curl -H "Authorization: Bearer <token>" \
 ## Running the Frontend
 
 A simple Next.js interface lives in the `frontend/` folder. It uses the API server described above.
+See [frontend/README.md](frontend/README.md) for a quickstart guide.
 
 ```bash
 # install frontend dependencies
