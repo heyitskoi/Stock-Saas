@@ -50,8 +50,6 @@ class Item(Base):
     in_use = Column(Integer, default=0)
     threshold = Column(Integer, default=0)
     min_par = Column(Integer, default=0)
-    department_id = Column(Integer, nullable=True)
-    category_id = Column(Integer, nullable=True)
     stock_code = Column(String, nullable=True)
     status = Column(String, nullable=True)
 
