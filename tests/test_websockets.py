@@ -124,6 +124,46 @@ def test_websocket_receives_inventory_updates(client):
         assert data["in_use"] == 0
 
 
+def test_websocket_transfer_notification(client):
+    token = _get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    from models import Tenant
+    import database
+
+    _session = database.SessionLocal()
+
+    dest = Tenant(name="dest")
+    _session.add(dest)
+    _session.commit()
+    _session.refresh(dest)
+
+    client.post(
+        "/items/add",
+        json={"name": "ws-trans", "quantity": 5, "threshold": 0, "tenant_id": 1},
+        headers=headers,
+    )
+
+    with client.websocket_connect("/ws/inventory/1") as ws1, client.websocket_connect(
+        f"/ws/inventory/{dest.id}"
+    ) as ws2:
+        resp = client.post(
+            "/items/transfer",
+            json={
+                "name": "ws-trans",
+                "quantity": 2,
+                "from_tenant_id": 1,
+                "to_tenant_id": dest.id,
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        msg1 = ws1.receive_json()
+        msg2 = ws2.receive_json()
+        assert msg1["event"] == "transfer"
+        assert msg2["event"] == "transfer"
+
+
 def teardown_module(module):
     if os.path.exists(db_path):
         os.remove(db_path)

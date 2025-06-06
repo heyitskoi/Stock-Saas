@@ -36,6 +36,18 @@ class ItemResponse(ItemBase):
         orm_mode = True
 
 
+class TransferRequest(BaseModel):
+    name: str
+    quantity: conint(gt=0)
+    from_tenant_id: int
+    to_tenant_id: int
+
+
+class TransferResponse(BaseModel):
+    from_item: ItemResponse
+    to_item: ItemResponse
+
+
 class UserBase(BaseModel):
     username: str
     notification_preference: str = "email"  # "email", "slack" or "none"
