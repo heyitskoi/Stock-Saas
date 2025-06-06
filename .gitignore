@@ -1,3 +1,4 @@
 inventory.json
 __pycache__/
 *.db
+venv/
