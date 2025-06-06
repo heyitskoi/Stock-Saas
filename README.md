@@ -121,9 +121,9 @@ Apply migrations to the database defined by `DATABASE_URL`:
 alembic upgrade head
 ```
 
-## Running tests
+## Testing
 
-After installing the project dependencies you can run the unit and API tests with `pytest`:
+After installing the Python dependencies you can run the unit and API tests with `pytest`:
 
 ```bash
 pip install -r requirements.txt
@@ -134,6 +134,16 @@ The `requirements.txt` file pins `httpx` to `0.27.*` to remain compatible with
 `starlette==0.27.0`.
 
 The tests use an in-memory SQLite database so they will not modify any local data files.
+
+Browser tests live under `frontend/tests`. Install the Node dependencies and download
+the Playwright browsers before running the test suite:
+
+```bash
+cd frontend
+npm install
+npx playwright install # or ./scripts/install_browsers.sh
+npx playwright test
+```
 
 ## External secret manager
 
