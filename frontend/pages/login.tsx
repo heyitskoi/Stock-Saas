@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { login } from '../lib/api';
 import { useRouter } from 'next/router';
+import { useAuth } from '../lib/AuthContext';
 
 export default function Login() {
   const router = useRouter();
+  const { login: authLogin } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -11,8 +12,7 @@ export default function Login() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const token = await login(username, password);
-      localStorage.setItem('token', token);
+      await authLogin(username, password);
       router.push('/');
     } catch {
       setError('Invalid credentials');

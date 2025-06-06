@@ -2,15 +2,16 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { getItems, deleteItem, exportAuditCSV } from '../lib/api';
+import { useAuth } from '../lib/AuthContext';
 
 export default function Home() {
   const router = useRouter();
+  const { token, logout } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     if (!token) return;
     getItems(token)
       .then(setItems)
@@ -20,10 +21,9 @@ export default function Home() {
     }).then((res) => {
       if (res.ok) setIsAdmin(true);
     });
-  }, []);
+  }, [token]);
 
   async function handleDelete(name: string) {
-    const token = localStorage.getItem('token');
     if (!token) return;
     try {
       await deleteItem(token, name);
@@ -34,7 +34,6 @@ export default function Home() {
   }
 
   async function handleDownload() {
-    const token = localStorage.getItem('token');
     if (!token) return;
     try {
       const csv = await exportAuditCSV(token);
@@ -53,6 +52,7 @@ export default function Home() {
   return (
     <div style={{ padding: 20 }}>
       <h1>Inventory Dashboard</h1>
+      <button onClick={logout} style={{ marginBottom: 20 }}>Logout</button>
       <nav style={{ marginBottom: 20 }}>
         <Link href="/add" style={{ marginRight: 10 }}>Add Item</Link>
         <Link href="/issue" style={{ marginRight: 10 }}>Issue Item</Link>

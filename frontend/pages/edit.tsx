@@ -1,9 +1,11 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { updateItemApi } from '../lib/api';
+import { useAuth } from '../lib/AuthContext';
 
 export default function EditItemPage() {
   const router = useRouter();
+  const { token } = useAuth();
   const [name, setName] = useState('');
   const [newName, setNewName] = useState('');
   const [threshold, setThreshold] = useState<number | ''>('');
@@ -17,7 +19,6 @@ export default function EditItemPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const token = localStorage.getItem('token');
     if (!token) {
       setError('Not authenticated');
       return;

@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { issueItem } from '../lib/api';
+import { useAuth } from '../lib/AuthContext';
 
 export default function IssueItemPage() {
   const router = useRouter();
+  const { token } = useAuth();
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState(0);
   const [error, setError] = useState('');
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const token = localStorage.getItem('token');
     if (!token) {
       setError('Not authenticated');
       return;
