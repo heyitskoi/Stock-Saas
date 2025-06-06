@@ -262,9 +262,9 @@ def test_register_duplicate_username(client):
     second = client.post("/auth/register", json=payload)
     assert second.status_code == 400
 
-def test_register_missing_department(client):
+def test_register_missing_tenant(client):
     resp = client.post(
         "/auth/register",
-        json={"email": "nodpt@example.com", "password": "pw", "department_id": 99},
+        json={"email": "nodpt@example.com", "password": "pw", "tenant_id": 99},
     )
     assert resp.status_code == 404

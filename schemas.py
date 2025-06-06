@@ -167,7 +167,7 @@ class PasswordResetConfirm(BaseModel):
 class RegisterRequest(BaseModel):
     email: str
     password: str
-    department_id: int | None = None
+    tenant_id: int | None = None
     is_admin: bool = False
 
 

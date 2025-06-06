@@ -24,10 +24,10 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == payload.email).first():
         raise HTTPException(status_code=400, detail="Username already registered")
 
-    if payload.department_id is not None:
-        tenant = db.query(Tenant).filter(Tenant.id == payload.department_id).first()
+    if payload.tenant_id is not None:
+        tenant = db.query(Tenant).filter(Tenant.id == payload.tenant_id).first()
         if not tenant:
-            raise HTTPException(status_code=404, detail="Department not found")
+            raise HTTPException(status_code=404, detail="Tenant not found")
     else:
         tenant = Tenant(name=payload.email)
         db.add(tenant)
