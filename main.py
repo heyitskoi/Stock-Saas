@@ -71,7 +71,12 @@ app.add_middleware(
 )
 
 # Add rate limiting middleware for sensitive endpoints
-rate_limiter = RateLimiter(limit=5, window=60, routes=["/token", "/users"])
+rate_limiter = RateLimiter(
+    limit=5,
+    window=60,
+    routes=["/token", "/users"],
+    redis_url=settings.rate_limit_redis_url,
+)
 app.state.rate_limiter = rate_limiter
 app.add_middleware(BaseHTTPMiddleware, dispatch=rate_limiter)
 
