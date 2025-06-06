@@ -203,7 +203,7 @@ export function StockDashboard() {
       try {
         // Fetch departments with loading state
         setIsLoading(prev => ({ ...prev, departments: true }));
-        const fetchedDepartments = await apiGet<Department[]>('/api/departments/');
+        const fetchedDepartments = await apiGet<Department[]>('/departments/');
         if (Array.isArray(fetchedDepartments) && fetchedDepartments.length > 0) {
           setDepartments(fetchedDepartments);
           console.log("Fetched departments:", fetchedDepartments);
@@ -214,7 +214,7 @@ export function StockDashboard() {
         
         // Fetch categories with loading state
         setIsLoading(prev => ({ ...prev, categories: true }));
-        const fetchedCategories = await apiGet<Category[]>('/api/categories/');
+        const fetchedCategories = await apiGet<Category[]>('/categories/');
         if (Array.isArray(fetchedCategories)) {
           setCategories(fetchedCategories);
           console.log("Fetched categories:", fetchedCategories);
@@ -341,7 +341,7 @@ export function StockDashboard() {
   const handleAddEditItemSubmit = async (itemData: Omit<StockItem, "id">) => {
     if (addEditInitialItem) {
       try {
-        const updated = await apiFetch<StockItem>("/api/items/update", {
+          const updated = await apiFetch<StockItem>("/items/update", {
           method: "PUT",
           body: { id: addEditInitialItem.id, ...itemData },
         })
@@ -355,7 +355,7 @@ export function StockDashboard() {
       }
     } else {
       try {
-        const created = await apiFetch<StockItem>("/api/items/add", {
+          const created = await apiFetch<StockItem>("/items/add", {
           method: "POST",
           body: itemData,
         })
@@ -382,7 +382,7 @@ export function StockDashboard() {
     }
 
     try {
-      const response = await apiPost<Department>('/api/departments/', {
+      const response = await apiPost<Department>('/departments/', {
         name: newDepartmentName,
         icon: newDepartmentIcon || "Computer"
       });
@@ -425,7 +425,7 @@ export function StockDashboard() {
       setIsLoading(prev => ({ ...prev, categories: true }));
       
       console.log("Creating category with data:", categoryData);
-      const newCategory = await apiFetch<Category>("/api/categories/", {
+        const newCategory = await apiFetch<Category>("/categories/", {
         method: "POST",
         body: {
           name: categoryData.name,
@@ -438,7 +438,7 @@ export function StockDashboard() {
       // Only update UI after successful API call
       if (newCategory && typeof newCategory.id === 'number') {
         // Refresh the entire categories list to ensure consistency
-        const refreshedCategories = await apiGet<Category[]>('/api/categories/');
+          const refreshedCategories = await apiGet<Category[]>('/categories/');
         if (Array.isArray(refreshedCategories)) {
           setCategories(refreshedCategories);
         } else {
@@ -760,7 +760,7 @@ export function StockDashboard() {
 
   const handleConfirmDelete = async () => {
     if (deleteType === "department") {
-      await apiFetch(`/api/departments/${deleteId}`, { method: "DELETE" })
+        await apiFetch(`/departments/${deleteId}`, { method: "DELETE" })
       setDepartments(departments.filter((dept) => dept.id !== deleteId))
       setCategories(categories.filter((cat) => cat.department_id !== deleteId))
       if (selectedDepartment === deleteId) {
@@ -771,7 +771,7 @@ export function StockDashboard() {
         description: "Department and its categories have been removed",
       })
     } else {
-      await apiFetch(`/api/categories/${deleteId}`, { method: "DELETE" })
+        await apiFetch(`/categories/${deleteId}`, { method: "DELETE" })
       setCategories(categories.filter((cat) => cat.id !== deleteId))
       toast({
         title: "Category Deleted",
@@ -781,7 +781,7 @@ export function StockDashboard() {
   }
 
   const handleSaveDepartment = async (updatedDepartment: Department) => {
-    const res = await apiFetch<Department>(`/api/departments/${updatedDepartment.id}`, {
+      const res = await apiFetch<Department>(`/departments/${updatedDepartment.id}`, {
       method: "PUT",
       body: updatedDepartment,
     })
@@ -793,7 +793,7 @@ export function StockDashboard() {
   }
 
   const handleSaveCategory = async (updatedCategory: Category) => {
-    const res = await apiFetch<Category>(`/api/categories/${updatedCategory.id}`, {
+      const res = await apiFetch<Category>(`/categories/${updatedCategory.id}`, {
       method: "PUT",
       body: updatedCategory,
     })
@@ -839,7 +839,7 @@ export function StockDashboard() {
     if (!deleteItem) return;
 
     try {
-      await apiFetch("/api/items/delete", {
+      await apiFetch("/items/delete", {
         method: "DELETE",
         body: { id: deleteItem.id },
       })
