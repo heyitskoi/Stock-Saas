@@ -101,6 +101,7 @@ def client():
 
     with _make_test_client(main.app) as c:
         if hasattr(main.app.state, "rate_limiter"):
+            main.app.state.rate_limiter.limit = 1000
             asyncio.get_event_loop().run_until_complete(
                 main.app.state.rate_limiter.reset()
             )
@@ -263,7 +264,7 @@ def test_user(db):
 
     # Create a test user
     user = User(
-        email="test@example.com",
+        username="test@example.com",
         hashed_password="hashed_password",
         tenant_id=tenant.id,
     )
@@ -398,7 +399,7 @@ def test_websocket_tenant_isolation(client, test_user, test_item):
     db.refresh(tenant2)
 
     user2 = User(
-        email="test2@example.com",
+        username="test2@example.com",
         hashed_password="hashed_password",
         tenant_id=tenant2.id,
     )
@@ -555,7 +556,7 @@ def test_websocket_broadcast_to_all_tenants(client, test_user, test_item):
     db.refresh(tenant2)
 
     user2 = User(
-        email="test2@example.com",
+        username="test2@example.com",
         hashed_password="hashed_password",
         tenant_id=tenant2.id,
     )
