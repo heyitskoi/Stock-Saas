@@ -64,4 +64,4 @@ export default function RouteGuard({ children }: RouteGuardProps) {
   }, [isAuthenticated, pathname, router, user]);
 
   return authorized ? <>{children}</> : null;
-} 
+}
