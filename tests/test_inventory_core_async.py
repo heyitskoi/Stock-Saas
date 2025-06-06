@@ -50,3 +50,15 @@ async def test_async_update_and_delete(adb):
     await async_delete_item(session, "smartphone", tenant_id)
     status = await async_get_status(session, tenant_id, name="smartphone")
     assert status == {}
+
+
+@pytest.mark.asyncio
+async def test_async_negative_quantity(adb):
+    session, tenant_id = adb
+    with pytest.raises(ValueError):
+        await async_add_item(session, "bad", -1, threshold=0, tenant_id=tenant_id)
+    await async_add_item(session, "good", 1, threshold=0, tenant_id=tenant_id)
+    with pytest.raises(ValueError):
+        await async_issue_item(session, "good", -2, tenant_id=tenant_id)
+    with pytest.raises(ValueError):
+        await async_return_item(session, "good", -1, tenant_id=tenant_id)

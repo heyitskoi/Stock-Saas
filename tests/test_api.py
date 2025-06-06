@@ -11,6 +11,7 @@ os.environ["SECRET_KEY"] = "test-secret"
 from fastapi.testclient import TestClient
 from main import app
 import pytest
+from datetime import datetime, timedelta
 from tests.factories import UserFactory, ItemFactory, AuditLogFactory
 
 
@@ -130,6 +131,32 @@ def test_issue_return_errors(client):
     data = status.json()["monitor"]
     assert data["available"] == 0
     assert data["in_use"] == 1
+
+
+def test_negative_quantity_validation(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    resp = client.post(
+        "/items/add",
+        json={"name": "bad", "quantity": -1, "threshold": 0, "tenant_id": 1},
+        headers=headers,
+    )
+    assert resp.status_code == 422
+
+    resp = client.post(
+        "/items/add",
+        json={"name": "good", "quantity": 1, "threshold": 0, "tenant_id": 1},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+
+    issue_fail = client.post(
+        "/items/issue",
+        json={"name": "good", "quantity": -2, "tenant_id": 1},
+        headers=headers,
+    )
+    assert issue_fail.status_code == 422
 
 
 def test_audit_log_endpoint(client):
@@ -400,6 +427,20 @@ def test_usage_endpoints(client):
     assert filter_user_resp.status_code == 200
     user_filtered = filter_user_resp.json()
     assert sum(e["issued"] for e in user_filtered) >= 3
+
+
+def test_usage_invalid_dates(client):
+    token = get_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    start = datetime.utcnow()
+    end = start - timedelta(days=1)
+    resp = client.get(
+        "/analytics/usage",
+        params={"start_date": start.isoformat(), "end_date": end.isoformat()},
+        headers=headers,
+    )
+    assert resp.status_code == 400
 
 
 def test_token_rate_limiting(client):
