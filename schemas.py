@@ -1,5 +1,9 @@
 from datetime import datetime
 from pydantic import BaseModel, conint
+try:
+    from pydantic import ConfigDict
+except Exception:
+    ConfigDict = None  # type: ignore
 
 
 class ItemBase(BaseModel):
@@ -47,8 +51,8 @@ class ItemResponse(ItemBase):
     id: int
     tenant_id: int
 
-    class Config:
-        orm_mode = True
+    if ConfigDict:
+        model_config = ConfigDict(from_attributes=True)
 
 
 class TransferRequest(BaseModel):
@@ -79,8 +83,8 @@ class UserResponse(UserBase):
     role: str
     tenant_id: int
 
-    class Config:
-        orm_mode = True
+    if ConfigDict:
+        model_config = ConfigDict(from_attributes=True)
 
 
 class UserUpdate(BaseModel):
@@ -103,8 +107,8 @@ class AuditLogResponse(BaseModel):
     quantity: int
     timestamp: datetime
 
-    class Config:
-        orm_mode = True
+    if ConfigDict:
+        model_config = ConfigDict(from_attributes=True)
 
 
 class TenantBase(BaseModel):
@@ -118,8 +122,8 @@ class TenantCreate(TenantBase):
 class TenantResponse(TenantBase):
     id: int
 
-    class Config:
-        orm_mode = True
+    if ConfigDict:
+        model_config = ConfigDict(from_attributes=True)
 
 
 class DepartmentBase(BaseModel):
@@ -134,8 +138,8 @@ class DepartmentCreate(DepartmentBase):
 class DepartmentResponse(DepartmentBase):
     id: int
 
-    class Config:
-        orm_mode = True
+    if ConfigDict:
+        model_config = ConfigDict(from_attributes=True)
 
 
 class CategoryBase(BaseModel):
@@ -151,8 +155,8 @@ class CategoryCreate(CategoryBase):
 class CategoryResponse(CategoryBase):
     id: int
 
-    class Config:
-        orm_mode = True
+    if ConfigDict:
+        model_config = ConfigDict(from_attributes=True)
 
 
 class PasswordResetRequest(BaseModel):
