@@ -1,5 +1,64 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export function isAuthenticated(): boolean {
+  if (typeof window === 'undefined') return false;
+  return !!localStorage.getItem('token');
+}
+
+interface ApiFetchOptions extends RequestInit {
+  /** body payload to be JSON stringified */
+  body?: any;
+}
+
+export async function apiFetch<T>(
+  path: string,
+  options: ApiFetchOptions = {}
+): Promise<T> {
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+  const headers: Record<string, string> = {
+    ...(options.headers || {}),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (options.body && !(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+    body:
+      options.body && !(options.body instanceof FormData)
+        ? JSON.stringify(options.body)
+        : options.body,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `Request failed with status ${res.status}`);
+  }
+
+  // Some endpoints may return no content
+  if (res.status === 204) {
+    return null as unknown as T;
+  }
+
+  return res.json() as Promise<T>;
+}
+
+export const apiPost = <T,>(
+  path: string,
+  body?: any,
+  options?: ApiFetchOptions
+) => apiFetch<T>(path, { method: 'POST', body, ...(options || {}) });
+
+export const apiGet = <T,>(path: string, options?: ApiFetchOptions) =>
+  apiFetch<T>(path, { method: 'GET', ...(options || {}) });
+
 export async function login(username: string, password: string): Promise<string> {
   const res = await fetch(`${API_URL}/token`, {
     method: 'POST',

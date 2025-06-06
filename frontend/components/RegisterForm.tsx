@@ -4,11 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiGet, apiPost, isAuthenticated } from '@/lib/api';
-
-interface Department {
-  id: number;
-  name: string;
-}
+import type { Department } from '@/types/stock';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');

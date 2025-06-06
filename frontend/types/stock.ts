@@ -23,11 +23,17 @@ export interface StockItem {
 }
 
 export interface StockHistoryEntry {
-  id: number;
-  item_id: number;
-  change: number;
-  timestamp: string;
-  note?: string;
+  id: number
+  item_id: number
+  date: string
+  type: 'request' | 'add' | 'transfer' | 'issue' | 'delete'
+  quantity: number
+  previous_quantity: number
+  new_quantity: number
+  notes?: string
+  from_department_id?: number
+  to_department_id?: number
+  source?: string
 }
 
 export interface DepartmentStock {
