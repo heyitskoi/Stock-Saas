@@ -128,7 +128,6 @@ After installing the project dependencies you can run the unit and API tests wit
 
 ```bash
 pip install -r requirements.txt
-pip install pytest
 pytest
 ```
 
