@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "npm run install-browsers && npx playwright test",
+    "install-browsers": "bash scripts/install_browsers.sh"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "latest",
