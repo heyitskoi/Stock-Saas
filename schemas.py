@@ -161,7 +161,10 @@ class CategoryResponse(CategoryBase):
 
 
 class CategoryUpdate(BaseModel):
+
+
     """Schema for updating a category."""
+
     name: str | None = None
     department_id: int | None = None
     icon: str | None = None

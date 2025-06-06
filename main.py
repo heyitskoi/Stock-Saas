@@ -24,8 +24,10 @@ from models import User, Tenant
 from routers.users import router as users_router
 from routers.analytics import router as analytics_router
 from routers.auth import router as auth_router
+from routers.audit import router as audit_router
 from routers.departments import router as departments_router
 from routers.categories import router as categories_router
+from routers.items import router as items_router
 from websocket_manager import InventoryWSManager
 from rate_limiter import RateLimiter
 
@@ -76,6 +78,8 @@ app.include_router(analytics_router)
 app.include_router(auth_router)
 app.include_router(departments_router)
 app.include_router(categories_router)
+app.include_router(items_router)
+app.include_router(audit_router)
 
 
 @app.websocket("/ws/inventory/{tenant_id}")

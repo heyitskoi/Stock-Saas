@@ -215,6 +215,8 @@ def update_item(
     if status is not None:
         item.status = status
 
+    _log_action(db, user_id, item, "update", 0)
+
     db.commit()
     db.refresh(item)
     return item
