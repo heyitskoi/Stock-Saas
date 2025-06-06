@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { StockDashboard } from '@/components/stock-dashboard';
+import StockDashboard from '@/components/stock-dashboard';
 import { useAuth } from '@/lib/auth-context';
 
 export default function Home() {

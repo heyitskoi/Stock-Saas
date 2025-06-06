@@ -1,32 +1,18 @@
-import asyncio
-
 from config import settings
 
-from fastapi import FastAPI, HTTPException, Depends, WebSocket, Form
+from fastapi import FastAPI, WebSocket, Form, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.websockets import WebSocketDisconnect
-from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import pyotp
 from jose import JWTError, jwt
 
-from database import Base, engine, get_db, SessionLocal, DATABASE_URL
+from database import Base, engine, SessionLocal, DATABASE_URL
 from database_async import get_async_db
 import database_async
-from inventory_core import (
-    get_status,
-    get_recent_logs,
-    get_item_history,
-    async_add_item,
-    async_issue_item,
-    async_return_item,
-    async_transfer_item,
-    async_update_item,
-    async_delete_item,
-)
 from auth import (
     login_for_access_token,
     require_role,
@@ -35,15 +21,6 @@ from auth import (
     ALGORITHM,
 )
 from models import User, Tenant
-from schemas import (
-    ItemCreate,
-    ItemResponse,
-    AuditLogResponse,
-    ItemUpdate,
-    ItemDelete,
-    TransferRequest,
-    TransferResponse,
-)
 from routers.users import router as users_router
 from routers.analytics import router as analytics_router
 from routers.auth import router as auth_router

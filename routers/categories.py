@@ -17,9 +17,15 @@ def create_category(
     db: Session = Depends(get_db),
     user: User = Depends(admin_or_manager),
 ):
-    if not db.query(Department).filter(Department.id == payload.department_id).first():
+    if not db.query(Department).filter(
+        Department.id == payload.department_id
+    ).first():
         raise HTTPException(status_code=404, detail="Department not found")
-    cat = Category(name=payload.name, department_id=payload.department_id, icon=payload.icon)
+    cat = Category(
+        name=payload.name,
+        department_id=payload.department_id,
+        icon=payload.icon,
+    )
     db.add(cat)
     db.commit()
     db.refresh(cat)
@@ -44,7 +50,9 @@ def update_category(
     cat = db.query(Category).filter(Category.id == category_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="Category not found")
-    if not db.query(Department).filter(Department.id == payload.department_id).first():
+    if not db.query(Department).filter(
+        Department.id == payload.department_id
+    ).first():
         raise HTTPException(status_code=404, detail="Department not found")
     cat.name = payload.name
     cat.department_id = payload.department_id

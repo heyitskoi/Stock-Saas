@@ -40,8 +40,12 @@ def client():
     )
     TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
-    async_engine = create_async_engine(f"sqlite+aiosqlite:///{tmp.name}", future=True)
-    TestingAsyncSessionLocal = async_sessionmaker(async_engine, expire_on_commit=False)
+    async_engine = create_async_engine(
+        f"sqlite+aiosqlite:///{tmp.name}", future=True
+    )
+    TestingAsyncSessionLocal = async_sessionmaker(
+        async_engine, expire_on_commit=False
+    )
 
     # Patch database and main modules to use in-memory DB
     database.engine = engine
@@ -174,9 +178,10 @@ def test_websocket_transfer_notification(client):
     assert dest_token_resp.status_code == 200
     dest_token = dest_token_resp.json()["access_token"]
 
-    with client.websocket_connect(f"/ws/inventory/1?token={token}") as ws1, client.websocket_connect(
-        f"/ws/inventory/{dest.id}?token={dest_token}"
-    ) as ws2:
+    with client.websocket_connect(f"/ws/inventory/1?token={token}") as ws1, \
+         client.websocket_connect(
+             f"/ws/inventory/{dest.id}?token={dest_token}"
+         ) as ws2:
         resp = client.post(
             "/items/transfer",
             json={
