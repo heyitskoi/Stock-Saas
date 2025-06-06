@@ -29,6 +29,7 @@ below a configured threshold, a warning is displayed during the status check.
    `NEXT_PUBLIC_API_URL` for the frontend and background worker variables
    such as `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`, `SLACK_WEBHOOK_URL`,
    `SMTP_SERVER`, `ALERT_EMAIL_TO` and `ALERT_EMAIL_FROM`.
+   **Do not commit your `.env` file to version control as it may contain secrets.**
 2. Install Python dependencies and start the API:
 
 ```bash
