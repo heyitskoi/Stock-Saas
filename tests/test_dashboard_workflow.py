@@ -18,8 +18,12 @@ def test_dashboard_workflow_not_supported(client):
     assert resp.status_code == 200
 
     # Attempt to transfer stock between departments
-    resp = client.post('/items/transfer', json={"name": "Laptop", "from_department_id": 1, "to_department_id": 2, "quantity": 1}, headers=headers)
-    assert resp.status_code == 404
+    resp = client.post(
+        '/items/transfer',
+        json={"name": "Laptop", "from_department_id": 1, "to_department_id": 2, "quantity": 1},
+        headers=headers,
+    )
+    assert resp.status_code == 422
 
     # Verify audit logs exist for added item
     logs = client.get('/audit/logs', params={"tenant_id": 1, "limit": 10}, headers=headers)
