@@ -1,11 +1,12 @@
 from functools import lru_cache
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, ConfigDict
 
 from secrets_manager import get_manager
 
 
 class Settings(BaseSettings):
+    model_config = ConfigDict(extra="ignore", env_file=".env")
     database_url: str = Field("sqlite:///./inventory.db", env="DATABASE_URL")
     secret_key: str | None = Field(None, env="SECRET_KEY")
     secret_store_file: str | None = Field(None, env="SECRET_STORE_FILE")
@@ -19,9 +20,6 @@ class Settings(BaseSettings):
     smtp_server: str | None = Field(None, env="SMTP_SERVER")
     alert_email_to: str | None = Field(None, env="ALERT_EMAIL_TO")
     alert_email_from: str = Field("noreply@example.com", env="ALERT_EMAIL_FROM")
-
-    class Config:
-        env_file = ".env"
 
 
 @lru_cache()
