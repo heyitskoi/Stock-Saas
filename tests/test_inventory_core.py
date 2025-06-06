@@ -125,3 +125,26 @@ def test_transfer_between_tenants(db):
     assert to_item.available == 2
     history = get_item_history(session, "widget", tenant_id)
     assert history[0].action == "transfer"
+
+
+def test_update_item_validation_and_log(db):
+    session, tenant_id = db
+    add_item(session, "widget", 1, threshold=1, tenant_id=tenant_id)
+
+    with pytest.raises(ValueError):
+        update_item(session, "widget", tenant_id=tenant_id, min_par=-1)
+
+    item = update_item(
+        session,
+        "widget",
+        tenant_id=tenant_id,
+        min_par=2,
+        status="active",
+    )
+
+    assert item.min_par == 2
+    assert item.status == "active"
+
+    history = get_item_history(session, "widget", tenant_id)
+    updates = [log.action for log in history].count("update")
+    assert updates == 1
