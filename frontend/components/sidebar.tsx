@@ -49,8 +49,9 @@ export function Sidebar({
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const { user } = useAuth()
-  const isAdminOrManager = user?.is_admin === true
-  const isAdmin = user?.is_admin === true
+  const isDev = process.env.NODE_ENV === "development"
+  const isAdminOrManager = user?.is_admin === true || isDev
+  const isAdmin = user?.is_admin === true || isDev
 
   const getIconComponent = (iconName: string) => {
     const found = ICON_LIST.find(iconObj => iconObj.name === iconName);
