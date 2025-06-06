@@ -1,11 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-test('inventory dashboard has nav links', async ({ page }) => {
+test('stock dashboard shows departments', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Inventory Dashboard' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Add Item' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Issue Item' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Return Item' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Systems Stock' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Systems' })).toBeVisible();
 });
 
 test('add item form fields present', async ({ page }) => {

@@ -57,14 +57,16 @@ def _build_csv(db: Session, limit: int, tenant_id: int) -> str:
     writer = csv.writer(output)
     writer.writerow(["id", "user_id", "item_id", "action", "quantity", "timestamp"])
     for log in logs:
-        writer.writerow([
-            log.id,
-            log.user_id,
-            log.item_id,
-            log.action,
-            log.quantity,
-            log.timestamp.isoformat(),
-        ])
+        writer.writerow(
+            [
+                log.id,
+                log.user_id,
+                log.item_id,
+                log.action,
+                log.quantity,
+                log.timestamp.isoformat(),
+            ]
+        )
     return output.getvalue()
 
 
@@ -161,8 +163,12 @@ def item_usage(
         query = query.filter(AuditLog.user_id == params.user_id)
 
     cache_key = (
-        "item", item_name, params.tenant_id, params.user_id,
-        since.isoformat(), until.isoformat()
+        "item",
+        item_name,
+        params.tenant_id,
+        params.user_id,
+        since.isoformat(),
+        until.isoformat(),
     )
     cached = _get_cached_usage(cache_key)
     if cached is not None:
@@ -207,11 +213,15 @@ def overall_usage(
         since = datetime.utcnow() - timedelta(days=params.days)
         until = datetime.utcnow()
 
-    query = db.query(AuditLog).filter(
-        AuditLog.timestamp >= since,
-        AuditLog.timestamp <= until,
-        AuditLog.action.in_(["issue", "return"])
-    ).order_by(AuditLog.timestamp)
+    query = (
+        db.query(AuditLog)
+        .filter(
+            AuditLog.timestamp >= since,
+            AuditLog.timestamp <= until,
+            AuditLog.action.in_(["issue", "return"]),
+        )
+        .order_by(AuditLog.timestamp)
+    )
 
     if params.item_name:
         query = query.join(Item).filter(Item.name == params.item_name)
@@ -222,8 +232,12 @@ def overall_usage(
         query = query.filter(AuditLog.user_id == params.user_id)
 
     cache_key = (
-        "overall", params.tenant_id, params.item_name, params.user_id,
-        since.isoformat(), until.isoformat()
+        "overall",
+        params.tenant_id,
+        params.item_name,
+        params.user_id,
+        since.isoformat(),
+        until.isoformat(),
     )
     cached = _get_cached_usage(cache_key)
     if cached is not None:
