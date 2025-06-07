@@ -4,17 +4,14 @@ from fastapi.testclient import TestClient
 import httpx
 import pytest
 import inspect
-import tests.conftest as conf
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from database import Base, get_db
-from main import app
 import asyncio
 from typing import AsyncGenerator, Generator
-import json
 from models import User, Item, Tenant
-from datetime import datetime, timedelta
+import time
 
 # Setup temporary SQLite DB path
 db_fd, db_path = tempfile.mkstemp(prefix="test_async", suffix=".db")
@@ -23,7 +20,6 @@ os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 os.environ["ASYNC_DATABASE_URL"] = f"sqlite+aiosqlite:///{db_path}"
 os.environ.setdefault("SECRET_KEY", "test-secret")
 
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker  # noqa: E402
 import database_async  # noqa: E402
 import database  # noqa: E402
 import main  # noqa: E402
@@ -36,17 +32,10 @@ def _make_test_client(app):
     return TestClient(app)
 
 
-engine = None
-TestingSessionLocal = None
-async_engine = None
-TestingAsyncSessionLocal = None
-
-
 @pytest.fixture
 def client():
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
     tmp.close()
-    global engine, TestingSessionLocal, async_engine, TestingAsyncSessionLocal
     engine = create_engine(
         f"sqlite:///{tmp.name}", connect_args={"check_same_thread": False}
     )
@@ -238,20 +227,6 @@ async def async_db() -> AsyncGenerator:
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
     await _engine.dispose()
-
-
-@pytest.fixture(scope="function")
-def client(db) -> Generator:
-    def override_get_db():
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as c:
-        yield c
-    app.dependency_overrides.clear()
 
 
 @pytest.fixture(scope="function")

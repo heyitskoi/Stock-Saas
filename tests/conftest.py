@@ -19,7 +19,6 @@ from models import User, Tenant  # noqa: E402
 from auth import get_password_hash  # noqa: E402
 
 
-
 def _make_test_client(app):
     if "transport" in inspect.signature(TestClient).parameters:
         return TestClient(app, transport=httpx.WSGITransport(app))

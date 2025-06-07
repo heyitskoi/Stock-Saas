@@ -19,7 +19,9 @@ def create_category(
 ):
     """Create a new category."""
     # Check if department exists
-    department = db.query(Department).filter(Department.id == category.department_id).first()
+    department = (
+        db.query(Department).filter(Department.id == category.department_id).first()
+    )
     if not department:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -27,7 +29,9 @@ def create_category(
         )
 
     # Check if category already exists
-    existing_category = db.query(Category).filter(Category.name == category.name).first()
+    existing_category = (
+        db.query(Category).filter(Category.name == category.name).first()
+    )
     if existing_category:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -91,7 +95,11 @@ def update_category(
 
     # Check if department exists if being updated
     if category_update.department_id:
-        department = db.query(Department).filter(Department.id == category_update.department_id).first()
+        department = (
+            db.query(Department)
+            .filter(Department.id == category_update.department_id)
+            .first()
+        )
         if not department:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

@@ -1,6 +1,6 @@
 from config import settings
 
-from fastapi import FastAPI, WebSocket, Form, Depends
+from fastapi import FastAPI, WebSocket, Depends
 
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware

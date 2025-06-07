@@ -35,6 +35,7 @@ def recent_audit_logs(
     logs = get_recent_logs(db, limit, tenant_id)
     return logs
 
+
 # In-memory store for export task results
 export_tasks: dict[str, str | None] = {}
 

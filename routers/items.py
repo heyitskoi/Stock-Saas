@@ -14,8 +14,6 @@ from schemas import (
 )
 from inventory_core import (
     add_item,
-    issue_item,
-    return_item,
     get_status,
     update_item,
     delete_item,
@@ -27,7 +25,11 @@ router = APIRouter(prefix="/items", tags=["items"])
 
 
 @router.post("/add", response_model=ItemResponse)
-def api_add_item(payload: ItemCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def api_add_item(
+    payload: ItemCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     try:
         item = add_item(
             db,
@@ -48,15 +50,26 @@ def api_add_item(payload: ItemCreate, db: Session = Depends(get_db), current_use
 
 
 @router.get("/status")
-def api_status(name: str | None = None, tenant_id: int = 1, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def api_status(
+    name: str | None = None,
+    tenant_id: int = 1,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     items: Dict[str, dict] = get_status(db, tenant_id=tenant_id, name=name)
     if not items:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Item not found"
+        )
     return items
 
 
 @router.put("/update", response_model=ItemResponse)
-def api_update_item(payload: ItemUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def api_update_item(
+    payload: ItemUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     try:
         item = update_item(
             db,
@@ -77,16 +90,26 @@ def api_update_item(payload: ItemUpdate, db: Session = Depends(get_db), current_
 
 
 @router.delete("/delete")
-def api_delete_item(payload: ItemDelete, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def api_delete_item(
+    payload: ItemDelete,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     try:
-        delete_item(db, name=payload.name, tenant_id=payload.tenant_id, user_id=current_user.id)
+        delete_item(
+            db, name=payload.name, tenant_id=payload.tenant_id, user_id=current_user.id
+        )
         return {"detail": "Item deleted"}
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.post("/transfer", response_model=TransferResponse)
-def api_transfer_item(payload: TransferRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def api_transfer_item(
+    payload: TransferRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     try:
         from_item, to_item = transfer_item(
             db,
@@ -102,7 +125,12 @@ def api_transfer_item(payload: TransferRequest, db: Session = Depends(get_db), c
 
 
 @router.get("/history")
-def api_item_history(name: str, tenant_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def api_item_history(
+    name: str,
+    tenant_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     logs = get_item_history(db, name=name, tenant_id=tenant_id)
     return [
         {

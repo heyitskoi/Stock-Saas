@@ -161,8 +161,6 @@ class CategoryResponse(CategoryBase):
 
 
 class CategoryUpdate(BaseModel):
-
-
     """Schema for updating a category."""
 
     name: str | None = None
