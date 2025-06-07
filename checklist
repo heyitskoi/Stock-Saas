@@ -11,6 +11,11 @@ REST API	FastAPI endpoints for add/issue/return/status
 Departments & Categories       Manage stock groups and transfer items
 Registration Endpoint  Allow new user sign up
 WebSocket Alerts        Real-time low stock warnings
+Password Reset Endpoints      Self-service account recovery
+Rate Limiting  Protect auth and user management routes
+Analytics Endpoints   CSV export and basic usage dashboards
+Docker Quickstart     `scripts/quickstart.sh` builds containers
+Playwright Tests      End-to-end browser coverage
 1. Security & Authentication
 Expectation	Why it Matters
 ✅ Authenticated access (JWT) - implemented

@@ -16,5 +16,6 @@ It is maintained by the **db-agent** (also referred to as the **backend-agent**)
   ```bash
   alembic upgrade head
   ```
-  Run this whenever the application starts on a new environment or when
-  deploying updates.
+Run this whenever the application starts on a new environment or when
+deploying updates. The `scripts/quickstart.sh` helper runs this automatically
+for Docker deployments.

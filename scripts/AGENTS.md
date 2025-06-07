@@ -14,4 +14,6 @@ These guidelines apply to the `scripts/` and `nginx/` directories.
 
 ## Quickstart
 
-Run `scripts/quickstart.sh` from the project root to build and launch all containers with `docker-compose`.
+Run `scripts/quickstart.sh` from the project root to build and launch all containers with `docker-compose`. This script also creates a `.env` file from `.env.example` if one does not exist.
+
+Use `scripts/rotate_secret.py` to generate a new `SECRET_KEY` in your configured secret store.

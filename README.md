@@ -34,6 +34,8 @@ WebSocket notifications when stock levels drop.
 - Password reset endpoints (`/auth/request-reset` and `/auth/reset-password`)
 - Secrets can be loaded from an external JSON store
 - Next.js frontend located in the `frontend/` directory
+- Docker and Nginx configuration with a quickstart script
+- Comprehensive test suite using Pytest and Playwright
 
 You can use the CLI or the API to manage inventory. When available stock falls
 below a configured threshold, a warning is displayed during the status check.
