@@ -108,3 +108,13 @@ export const deleteUser = (token: string, id: number) =>
     method: 'DELETE',
     body: { id },
   });
+
+// Settings
+export const getSettings = (token: string) =>
+  apiGet<Record<string, string>>('/settings?tenant_id=1');
+
+export const updateSettings = (token: string, data: Record<string, string>) =>
+  apiFetch<Record<string, string>>('/settings', {
+    method: 'PUT',
+    body: { tenant_id: 1, settings: data },
+  });

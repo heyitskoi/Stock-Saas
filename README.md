@@ -251,6 +251,8 @@ After logging in you will see the dashboard listing all items. Links are provide
 
 Admins can also open `/users` to manage accounts. The page lists existing users and includes a form to create new ones.
 
+A simple `/settings` page lets administrators store configuration values in the database. Use it to tweak options like notification settings without touching environment variables during testing.
+
 The latest UI introduces a sidebar driven dashboard where stock is organised by **department** and **category**. Users can create, edit and delete departments or categories, restock items or transfer them between departments, and scan barcodes to look up stock quickly. A history dialog records all actions so past movements can be reviewed.
 
 ### Frontend tests
