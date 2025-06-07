@@ -22,6 +22,19 @@ Recent updates include support for departments and categories, transferring
 items between them, a registration endpoint with user management UI and
 WebSocket notifications when stock levels drop.
 
+## Features
+
+- Multi-tenant inventory with role based access control
+- Departments and categories to organise stock
+- CSV export of audit logs and background tasks powered by Celery
+- Async endpoints and database sessions using SQLAlchemy's async engine
+- Analytics endpoints with optional Redis caching
+- WebSocket notifications when stock is low
+- Rate limiting for authentication and user management routes
+- Password reset endpoints (`/auth/request-reset` and `/auth/reset-password`)
+- Secrets can be loaded from an external JSON store
+- Next.js frontend located in the `frontend/` directory
+
 You can use the CLI or the API to manage inventory. When available stock falls
 below a configured threshold, a warning is displayed during the status check.
 
@@ -35,6 +48,8 @@ below a configured threshold, a warning is displayed during the status check.
   `ADMIN_PASSWORD`, `NEXT_PUBLIC_API_URL` for the frontend,
   `CORS_ALLOW_ORIGINS` for allowed CORS origins and background
   worker variables such as `CELERY_BROKER_URL`, `STOCK_CHECK_INTERVAL`,
+  `REDIS_URL` for caching, `RATE_LIMIT_REDIS_URL` for the rate limiter,
+  `ASYNC_DATABASE_URL` when using an async driver,
   `SLACK_WEBHOOK_URL`, `SMTP_SERVER`, `ALERT_EMAIL_TO` and
   `ALERT_EMAIL_FROM`. **Do not commit your `.env` file to version control as
   it may contain secrets.**
@@ -257,6 +272,13 @@ New users can sign up via the `/register` page in the Next.js frontend. The form
 submits directly to the FastAPI endpoint `/auth/register`. When departments exist the page lets users choose one; otherwise
 a tenant is created automatically. On success the user is redirected to the login
 screen.
+
+## Password reset
+
+If a user forgets their password they can request a reset token by POSTing their
+username to `/auth/request-reset`. The token returned from this endpoint should
+be supplied to `/auth/reset-password` together with the new password. Tokens
+expire after one hour.
 
 
 ## Running with Docker
