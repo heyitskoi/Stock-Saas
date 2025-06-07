@@ -19,7 +19,12 @@ export async function apiFetch<T>(
   }
 
   let body = opts.body;
-  if (body && typeof body === 'object' && !(body instanceof FormData)) {
+  if (
+    body &&
+    typeof body === 'object' &&
+    !(body instanceof FormData) &&
+    !(body instanceof URLSearchParams)
+  ) {
     headers.set('Content-Type', 'application/json');
     body = JSON.stringify(body);
   }
