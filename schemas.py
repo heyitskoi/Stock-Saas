@@ -170,6 +170,24 @@ class CategoryUpdate(BaseModel):
     icon: str | None = None
 
 
+class SettingBase(BaseModel):
+    key: str
+    value: str
+    tenant_id: int
+
+
+class SettingResponse(SettingBase):
+    id: int
+
+    if ConfigDict:
+        model_config = ConfigDict(from_attributes=True)
+
+
+class SettingsUpdate(BaseModel):
+    tenant_id: int
+    settings: dict[str, str]
+
+
 class PasswordResetRequest(BaseModel):
     username: str
 

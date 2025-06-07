@@ -13,6 +13,7 @@ class Tenant(Base):
 
     users = relationship("User", back_populates="tenant")
     items = relationship("Item", back_populates="tenant")
+    settings = relationship("Setting", back_populates="tenant")
 
 
 class Department(Base):
@@ -109,3 +110,17 @@ class PasswordResetToken(Base):
     expires_at = Column(DateTime)
 
     user = relationship("User")
+
+
+class Setting(Base):
+    __tablename__ = "settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"))
+    key = Column(String, nullable=False)
+    value = Column(String, nullable=False)
+
+    tenant = relationship("Tenant", back_populates="settings")
+
+    __table_args__ = (UniqueConstraint("tenant_id", "key", name="uix_tenant_key"),)
+
