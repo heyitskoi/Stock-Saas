@@ -63,6 +63,7 @@ def client():
             await adb.refresh(tenant)
             admin = User(
                 username="admin",
+                email="admin@example.com",
                 hashed_password=get_password_hash("admin"),
                 role="admin",
                 tenant_id=tenant.id,
@@ -151,6 +152,7 @@ def test_websocket_transfer_notification(client):
     _session.refresh(dest)
     dest_user = User(
         username="dest_admin",
+        email="dest_admin@example.com",
         hashed_password=get_password_hash("dest"),
         role="admin",
         tenant_id=dest.id,
@@ -240,6 +242,7 @@ def test_user(db):
     # Create a test user
     user = User(
         username="test@example.com",
+        email="test@example.com",
         hashed_password="hashed_password",
         tenant_id=tenant.id,
     )
@@ -375,6 +378,7 @@ def test_websocket_tenant_isolation(client, test_user, test_item):
 
     user2 = User(
         username="test2@example.com",
+        email="test2@example.com",
         hashed_password="hashed_password",
         tenant_id=tenant2.id,
     )
@@ -532,6 +536,7 @@ def test_websocket_broadcast_to_all_tenants(client, test_user, test_item):
 
     user2 = User(
         username="test2@example.com",
+        email="test2@example.com",
         hashed_password="hashed_password",
         tenant_id=tenant2.id,
     )

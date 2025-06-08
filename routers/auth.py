@@ -19,7 +19,11 @@ router = APIRouter(prefix="/auth")
 
 @router.post("/register", response_model=RegisterResponse)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.username == payload.email).first():
+    if (
+        db.query(User)
+        .filter((User.username == payload.username) | (User.email == payload.email))
+        .first()
+    ):
         raise HTTPException(status_code=400, detail="Username already registered")
 
     if payload.tenant_id is not None:
@@ -34,7 +38,8 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
 
     role = "admin" if payload.is_admin else "user"
     user = User(
-        username=payload.email,
+        username=payload.username,
+        email=payload.email,
         hashed_password=get_password_hash(payload.password),
         role=role,
         tenant_id=tenant.id,

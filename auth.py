@@ -34,7 +34,9 @@ def get_password_hash(password):
 async def authenticate_user(
     db: AsyncSession, username: str, password: str
 ) -> Optional[User]:
-    result = await db.execute(select(User).where(User.username == username))
+    result = await db.execute(
+        select(User).where((User.username == username) | (User.email == username))
+    )
     user = result.scalars().first()
     if user and verify_password(password, user.hashed_password):
         return user

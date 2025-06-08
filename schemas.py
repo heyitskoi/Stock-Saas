@@ -70,6 +70,7 @@ class TransferResponse(BaseModel):
 
 class UserBase(BaseModel):
     username: str
+    email: str
     notification_preference: str = "email"  # "email", "slack" or "none"
 
 
@@ -91,6 +92,7 @@ class UserResponse(UserBase):
 class UserUpdate(BaseModel):
     id: int
     username: str | None = None
+    email: str | None = None
     password: str | None = None
     role: str | None = None
     notification_preference: str | None = None
@@ -179,6 +181,7 @@ class PasswordResetConfirm(BaseModel):
 
 class RegisterRequest(BaseModel):
     email: str
+    username: str
     password: str
     tenant_id: int | None = None
     is_admin: bool = False

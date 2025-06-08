@@ -31,18 +31,21 @@ def test_notification_logs_created():
         [
             User(
                 username="e1@example.com",
+                email="e1@example.com",
                 hashed_password="x",
                 tenant_id=1,
                 notification_preference="email",
             ),
             User(
                 username="s1@example.com",
+                email="s1@example.com",
                 hashed_password="x",
                 tenant_id=1,
                 notification_preference="slack",
             ),
             User(
                 username="n1@example.com",
+                email="n1@example.com",
                 hashed_password="x",
                 tenant_id=1,
                 notification_preference="none",

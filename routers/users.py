@@ -20,12 +20,16 @@ def create_user(
     ensure_tenant(user, payload.tenant_id)
     if (
         db.query(User)
-        .filter(User.username == payload.username, User.tenant_id == payload.tenant_id)
+        .filter(
+            (User.username == payload.username) | (User.email == payload.email),
+            User.tenant_id == payload.tenant_id,
+        )
         .first()
     ):
         raise HTTPException(status_code=400, detail="Username already registered")
     new_user = User(
         username=payload.username,
+        email=payload.email,
         hashed_password=get_password_hash(payload.password),
         role=payload.role,
         tenant_id=payload.tenant_id,
@@ -63,11 +67,16 @@ def update_user(
     if payload.username:
         if (
             db.query(User)
-            .filter(User.username == payload.username, User.id != payload.id)
+            .filter(
+                (User.username == payload.username) | (User.email == payload.email),
+                User.id != payload.id,
+            )
             .first()
         ):
             raise HTTPException(status_code=400, detail="Username already registered")
         user_obj.username = payload.username
+    if payload.email:
+        user_obj.email = payload.email
     if payload.password:
         user_obj.hashed_password = get_password_hash(payload.password)
     if payload.role:
