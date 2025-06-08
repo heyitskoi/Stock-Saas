@@ -8,6 +8,7 @@ import type { Department } from '@/types/stock';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [departmentId, setDepartmentId] = useState<number | ''>('');
@@ -49,6 +50,7 @@ export default function RegisterForm() {
     try {
       await apiPost('/auth/register', {
         email,
+        username,
         password,
         department_id: showDepartments && departmentId ? departmentId : null,
         is_admin: true // Default to admin user
@@ -85,6 +87,20 @@ export default function RegisterForm() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+            Username
+          </label>
+          <input
+            id="username"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />

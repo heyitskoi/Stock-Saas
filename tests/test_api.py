@@ -15,6 +15,7 @@ def test_multi_tenant_isolation(client):
 
     admin2 = User(
         username="admin2",
+        email="admin2@example.com",
         hashed_password=get_password_hash("admin2"),
         role="admin",
         tenant_id=tenant2.id,
@@ -121,6 +122,7 @@ def test_create_user_duplicate_username(client):
     headers = {"Authorization": f"Bearer {token}"}
     payload = {
         "username": "dup",
+        "email": "dup@example.com",
         "password": "x",
         "role": "user",
         "tenant_id": 1,
@@ -139,6 +141,7 @@ def test_update_user_duplicate_username(client):
         "/users/",
         json={
             "username": "user1",
+            "email": "user1@example.com",
             "password": "a",
             "role": "user",
             "tenant_id": 1,
@@ -150,6 +153,7 @@ def test_update_user_duplicate_username(client):
         "/users/",
         json={
             "username": "user2",
+            "email": "user2@example.com",
             "password": "a",
             "role": "user",
             "tenant_id": 1,
@@ -253,16 +257,21 @@ def test_transfer_endpoint_and_history(client):
 def test_register_success(client):
     resp = client.post(
         "/auth/register",
-        json={"email": "new@example.com", "password": "secret", "is_admin": False},
+        json={
+            "email": "new@example.com",
+            "username": "newuser",
+            "password": "secret",
+            "is_admin": False,
+        },
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert data["user"]["username"] == "new@example.com"
+    assert data["user"]["username"] == "newuser"
     assert data["user"]["tenant_id"]
 
 
 def test_register_duplicate_username(client):
-    payload = {"email": "dup@example.com", "password": "x"}
+    payload = {"email": "dup@example.com", "username": "dupuser", "password": "x"}
     first = client.post("/auth/register", json=payload)
     assert first.status_code == 200
     second = client.post("/auth/register", json=payload)
@@ -272,6 +281,11 @@ def test_register_duplicate_username(client):
 def test_register_missing_tenant(client):
     resp = client.post(
         "/auth/register",
-        json={"email": "nodpt@example.com", "password": "pw", "tenant_id": 99},
+        json={
+            "email": "nodpt@example.com",
+            "username": "nodpt",
+            "password": "pw",
+            "tenant_id": 99,
+        },
     )
     assert resp.status_code == 404

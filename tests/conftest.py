@@ -56,6 +56,7 @@ def client():
             await adb.refresh(tenant)
             admin = User(
                 username="admin",
+                email="admin@example.com",
                 hashed_password=get_password_hash("admin"),
                 role="admin",
                 tenant_id=tenant.id,
