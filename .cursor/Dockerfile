@@ -12,9 +12,17 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     python3 \
     python3-pip \
-    nodejs \
-    npm \
+    vim \
+    nano \
     && rm -rf /var/lib/apt/lists/*
+
+# Install latest Node.js LTS version
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g npm@latest
+
+# Upgrade pip to latest version
+RUN python3 -m pip install --upgrade pip
 
 # Create a non-root user
 RUN useradd -m -s /bin/bash ubuntu
