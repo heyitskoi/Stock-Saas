@@ -13,6 +13,9 @@ JWT tokens and basic role based access control (admin, manager, user).
 Credentials for the initial admin account are read from the environment
 variables `ADMIN_USERNAME` and `ADMIN_PASSWORD`. When running with the default
 SQLite database, missing values fall back to `admin`/`admin` for convenience.
+Use this username when signing in. Email addresses entered during registration
+are stored in the `username` column; there is no separate `email` field in the
+database.
 
 Inventory data is scoped by **tenant**. Every item and user belongs to a tenant
 record, identified by `tenant_id`. API requests must include this identifier so

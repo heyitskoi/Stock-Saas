@@ -14,8 +14,8 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-stock}:${POSTGRES_PASSWORD:-stock}@db:5432/${POSTGRES_DB:-stockdb}
       SECRET_KEY: ${SECRET_KEY}
-      ADMIN_USERNAME: admin
-      ADMIN_PASSWORD: admin
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
     depends_on:
       - db
     ports:
