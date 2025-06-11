@@ -32,6 +32,12 @@ This project uses a multi-agent approach to build a SaaS inventory platform.
   - API integration tests
   - Frontend behavior validation (basic test coverage)
 
+### 5. ⚙️ `ops-agent`
+- **Responsibilities**:
+  - Docker builds and Compose orchestration
+  - Manage Nginx configuration
+  - Provide helper scripts for local development
+
 ## Project Scope
 
 - Multi-tenant inventory system (each department manages its own stock)
@@ -55,9 +61,10 @@ This project uses a multi-agent approach to build a SaaS inventory platform.
 
 | Agent          | Status   | Notes                             |
 |----------------|----------|-----------------------------------|
-| backend-agent  | 🚧 WIP    | Base FastAPI routes in progress   |
-| frontend-agent | ⏳ Planned | V0.dev design coming next        |
-| analytics-agent| ❌ Not started | Data tracking not yet implemented |
-| test-agent     | ⏳ Planned | Unit testing planned after API v1 |
+| backend-agent  | ✅ Active | API and business logic implemented |
+| frontend-agent | 🚧 WIP    | Next.js dashboard under active development |
+| analytics-agent| 🚧 WIP    | CSV export and usage metrics available |
+| test-agent     | ✅ Active | Pytest and Playwright suites run in CI |
+| ops-agent      | ✅ Active | Docker and Nginx configuration maintained |
 
 Refer to [ROADMAP.md](ROADMAP.md) for prioritized features per agent.

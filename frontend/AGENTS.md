@@ -14,4 +14,5 @@ This directory contains the Next.js interface managed by the **frontend-agent**.
 - Keep components simple and avoid heavy UI frameworks.
 - Before running Playwright tests, execute `npx playwright install` to download the required browser binaries. A helper script is available at `frontend/scripts/install_browsers.sh` and should be run from the `frontend` directory.
 - Run browser tests using `npx playwright test`.
+- Create a production build with `npm run build` before deploying.
 
